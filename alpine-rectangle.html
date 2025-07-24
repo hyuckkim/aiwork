@@ -73,6 +73,10 @@
       색상:
       <input type="color" x-model="selectedRect.color">
     </label>
+    <br><br>
+    <button @click="deleteSelected()" style="background: #f44336; color: white; border: none; padding: 5px 10px; cursor: pointer;">
+      🗑️ 삭제하기
+    </button>
   </div>
   <script>
 document.addEventListener('alpine:init', () => {
@@ -186,6 +190,13 @@ endDrag() {
   this.dragDirection = null;
   this.creatingRect = false;
   this.newRect = null;
+},
+
+deleteSelected() {
+  if (this.selectedRect) {
+    this.rectangles = this.rectangles.filter(r => r.id !== this.selectedRect.id);
+    this.selectedRect = null;
+  }
 }
 }));
 });
