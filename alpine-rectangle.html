@@ -111,22 +111,27 @@ onDrag(event) {
   if (this.dragType === 'resize') {
     const start = this.startRect;
 
-    // 좌우 처리
     if (this.dragDirection.includes('left')) {
       r.x = start.x + dx;
-      r.width = Math.max(10, start.width - dx); // 최소 너비 제한
+      r.width = start.width - dx;
     }
     if (this.dragDirection.includes('right')) {
-      r.width = Math.max(10, start.width + dx);
+      r.width = start.width + dx;
     }
-
-    // 상하 처리
     if (this.dragDirection.includes('top')) {
       r.y = start.y + dy;
-      r.height = Math.max(10, start.height - dy); // 최소 높이 제한
+      r.height = start.height - dy;
     }
     if (this.dragDirection.includes('bottom')) {
-      r.height = Math.max(10, start.height + dy);
+      r.height = start.height + dy;
+    }
+
+    // 👉 최소 크기 미만이면 제거
+    if (r.width < 10 || r.height < 10) {
+      this.rectangles = this.rectangles.filter(rect => rect.id !== r.id);
+      this.dragging = null;
+      this.dragType = null;
+      this.dragDirection = null;
     }
   }
 
