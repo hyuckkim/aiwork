@@ -34,7 +34,6 @@
       position: absolute;
     }
 
-    /* 위치별 핸들 스타일 */
     .top-left     { top: -5px; left: -5px; cursor: nw-resize; }
     .top          { top: -5px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
     .top-right    { top: -5px; right: -5px; cursor: ne-resize; }
@@ -46,20 +45,18 @@
   </style>
 </head>
 <body x-data="editor">
-
   <h2>📐 사각형 드래그 & 리사이즈 에디터</h2>
 
   <div class="editor"
        @mousedown="startCreate($event)"
        @mousemove.window="onDrag($event)"
-       @mouseup.window="endDrag($event)"
+       @mouseup.window="endDrag()"
   >
     <template x-for="rect in rectangles" :key="rect.id">
       <div class="rectangle"
            :style="`left: ${rect.x}px; top: ${rect.y}px; width: ${rect.width}px; height: ${rect.height}px; border-color: ${rect.color}`"
            @mousedown="startMove(rect, $event)"
       >
-        <!-- 8 방향 핸들 -->
         <template x-for="dir in directions" :key="dir">
           <div
             class="handle"
@@ -72,113 +69,96 @@
   </div>
 
   <script>
-document.addEventListener('alpine:init', () => {
-Alpine.data('editor', () => ({
-rectangles: [
-  { id: 1, x: 100, y: 80, width: 120, height: 80, color: '#f00' },
-  { id: 2, x: 300, y: 150, width: 100, height: 120, color: '#00f' }
-],
-directions: ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],
-dragging: null,
-dragType: null,
-dragDirection: null,
-creatingRect: false,
-newRect: null,
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('editor', () => ({
+        rectangles: [
+          { id: 1, x: 100, y: 80, width: 120, height: 80, color: '#f00' },
+          { id: 2, x: 300, y: 150, width: 100, height: 120, color: '#00f' }
+        ],
+        directions: ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],
+        dragging: null,
+        dragType: null,
+        dragDirection: null,
+        creatingRect: false,
+        newRect: null,
+        startX: 0,
+        startY: 0,
+        startRect: null,
 
-startMove(rect, event) {
-  this.dragging = rect;
-  this.dragType = 'move';
-  this.startX = event.clientX;
-  this.startY = event.clientY;
-  this.startRect = { ...rect };
-},
+        startMove(rect, event) {
+          this.dragging = rect;
+          this.dragType = 'move';
+          this.startX = event.clientX;
+          this.startY = event.clientY;
+          this.startRect = { ...rect };
+        },
 
-startResize(rect, direction, event) {
-  this.dragging = rect;
-  this.dragType = 'resize';
-  this.dragDirection = direction;
-  this.startX = event.clientX;
-  this.startY = event.clientY;
-  this.startRect = { ...rect };
-},
+        startResize(rect, direction, event) {
+          this.dragging = rect;
+          this.dragType = 'resize';
+          this.dragDirection = direction;
+          this.startX = event.clientX;
+          this.startY = event.clientY;
+          this.startRect = { ...rect };
+        },
 
-onDrag(event) {
-  if (!this.dragging) return;
-  const dx = event.clientX - this.startX;
-  const dy = event.clientY - this.startY;
-  const r = this.dragging;
+        startCreate(event) {
+          if (event.target.classList.contains('editor')) {
+            this.creatingRect = true;
+            const x = event.offsetX;
+            const y = event.offsetY;
+            const id = Date.now();
+            this.newRect = { id, x, y, width: 0, height: 0, color: '#0f0' };
+            this.rectangles.push(this.newRect);
+            this.startX = event.clientX;
+            this.startY = event.clientY;
+            this.startRect = { ...this.newRect };
+            this.dragging = this.newRect;
+            this.dragType = 'resize';
+            this.dragDirection = 'bottom-right';
+          }
+        },
 
-  if (this.dragType === 'resize') {
-    const start = this.startRect;
+        onDrag(event) {
+          if (!this.dragging) return;
+          const dx = event.clientX - this.startX;
+          const dy = event.clientY - this.startY;
+          const r = this.dragging;
+          const s = this.startRect;
 
-    if (this.dragDirection.includes('left')) {
-      r.x = start.x + dx;
-      r.width = start.width - dx;
-    }
-    if (this.dragDirection.includes('right')) {
-      r.width = start.width + dx;
-    }
-    if (this.dragDirection.includes('top')) {
-      r.y = start.y + dy;
-      r.height = start.height - dy;
-    }
-    if (this.dragDirection.includes('bottom')) {
-      r.height = start.height + dy;
-    }
+          if (this.dragType === 'resize') {
+            if (this.dragDirection.includes('left')) {
+              r.x = s.x + dx;
+              r.width = s.width - dx;
+            }
+            if (this.dragDirection.includes('right')) {
+              r.width = s.width + dx;
+            }
+            if (this.dragDirection.includes('top')) {
+              r.y = s.y + dy;
+              r.height = s.height - dy;
+            }
+            if (this.dragDirection.includes('bottom')) {
+              r.height = s.height + dy;
+            }
+          }
 
-    // 👉 최소 크기 미만이면 제거
-    if (r.width < 10 || r.height < 10) {
-      this.rectangles = this.rectangles.filter(rect => rect.id !== r.id);
-      this.dragging = null;
-      this.dragType = null;
-      this.dragDirection = null;
-    }
-  }
+          if (this.dragType === 'move') {
+            r.x = s.x + dx;
+            r.y = s.y + dy;
+          }
+        },
 
-  if (this.dragType === 'move') {
-    r.x = this.startRect.x + dx;
-    r.y = this.startRect.y + dy;
-  }
-},
-
-
-endDrag() {
-  this.dragging = null;
-  this.dragType = null;
-  this.dragDirection = null;
-},
-
-startCreate(event) {
-  // 사각형 클릭이 아닌 배경 클릭일 때만
-  if (event.target.classList.contains('editor')) {
-    this.creatingRect = true;
-    const x = event.offsetX;
-    const y = event.offsetY;
-    const id = Date.now(); // 임시 ID
-    this.newRect = { id, x, y, width: 0, height: 0, color: '#0f0' };
-    this.rectangles.push(this.newRect);
-    this.startX = event.clientX;
-    this.startY = event.clientY;
-    this.startRect = { ...this.newRect };
-    this.dragging = this.newRect;
-    this.dragType = 'resize';
-    this.dragDirection = 'bottom-right'; // 기본 방향
-  }
-},
-
-endDrag() {
-  if (this.creatingRect) {
-    // 크기가 너무 작으면 제거
-    if (this.newRect.width < 10 || this.newRect.height < 10) {
-      this.rectangles = this.rectangles.filter(r => r.id !== this.newRect.id);
-    }
-    this.creatingRect = false;
-    this.newRect = null;
-  }
-  this.dragging = null;
-  this.dragType = null;
-  this.dragDirection = null;
-},
+        endDrag() {
+          if (this.dragging && (this.dragging.width < 10 || this.dragging.height < 10)) {
+            this.rectangles = this.rectangles.filter(r => r.id !== this.dragging.id);
+          }
+          this.dragging = null;
+          this.dragType = null;
+          this.dragDirection = null;
+          this.creatingRect = false;
+          this.newRect = null;
+        }
       }));
     });
   </script>
