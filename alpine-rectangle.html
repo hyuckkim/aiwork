@@ -69,98 +69,118 @@
   </div>
 
   <script>
-    document.addEventListener('alpine:init', () => {
-      Alpine.data('editor', () => ({
-        rectangles: [
-          { id: 1, x: 100, y: 80, width: 120, height: 80, color: '#f00' },
-          { id: 2, x: 300, y: 150, width: 100, height: 120, color: '#00f' }
-        ],
-        directions: ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],
-        dragging: null,
-        dragType: null,
-        dragDirection: null,
-        creatingRect: false,
-        newRect: null,
-        startX: 0,
-        startY: 0,
-        startRect: null,
+document.addEventListener('alpine:init', () => {
+Alpine.data('editor', () => ({
+rectangles: [
+  { id: 1, x: 100, y: 80, width: 120, height: 80, color: '#f00' },
+  { id: 2, x: 300, y: 150, width: 100, height: 120, color: '#00f' }
+],
+directions: ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],
+dragging: null,
+dragType: null,
+dragDirection: null,
+creatingRect: false,
+newRect: null,
+startX: 0,
+startY: 0,
+startRect: null,
 
-        startMove(rect, event) {
-          this.dragging = rect;
-          this.dragType = 'move';
-          this.startX = event.clientX;
-          this.startY = event.clientY;
-          this.startRect = { ...rect };
-        },
+startMove(rect, event) {
+  this.dragging = rect;
+  this.dragType = 'move';
+  this.startX = event.clientX;
+  this.startY = event.clientY;
+  this.startRect = { ...rect };
+},
 
-        startResize(rect, direction, event) {
-          this.dragging = rect;
-          this.dragType = 'resize';
-          this.dragDirection = direction;
-          this.startX = event.clientX;
-          this.startY = event.clientY;
-          this.startRect = { ...rect };
-        },
+startResize(rect, direction, event) {
+  this.dragging = rect;
+  this.dragType = 'resize';
+  this.dragDirection = direction;
+  this.startX = event.clientX;
+  this.startY = event.clientY;
+  this.startRect = { ...rect };
+},
 
-        startCreate(event) {
-          if (event.target.classList.contains('editor')) {
-            this.creatingRect = true;
-            const x = event.offsetX;
-            const y = event.offsetY;
-            const id = Date.now();
-            this.newRect = { id, x, y, width: 0, height: 0, color: '#0f0' };
-            this.rectangles.push(this.newRect);
-            this.startX = event.clientX;
-            this.startY = event.clientY;
-            this.startRect = { ...this.newRect };
-            this.dragging = this.newRect;
-            this.dragType = 'resize';
-            this.dragDirection = 'bottom-right';
-          }
-        },
+startCreate(event) {
+  if (event.target.classList.contains('editor')) {
+    this.creatingRect = true;
+    const x = event.offsetX;
+    const y = event.offsetY;
+    const id = Date.now();
+    this.newRect = { id, x, y, width: 0, height: 0, color: '#0f0' };
+    this.rectangles.push(this.newRect);
+    this.startX = event.clientX;
+    this.startY = event.clientY;
+    this.startRect = { ...this.newRect };
+    this.dragging = this.newRect;
+    this.dragType = 'resize';
+    this.dragDirection = 'bottom-right';
+  }
+},
 
-        onDrag(event) {
-          if (!this.dragging) return;
-          const dx = event.clientX - this.startX;
-          const dy = event.clientY - this.startY;
-          const r = this.dragging;
-          const s = this.startRect;
+onDrag(event) {
+  if (!this.dragging) return;
+  const dx = event.clientX - this.startX;
+  const dy = event.clientY - this.startY;
+  const r = this.dragging;
+  const s = this.startRect;
 
-          if (this.dragType === 'resize') {
-            if (this.dragDirection.includes('left')) {
-              r.x = s.x + dx;
-              r.width = s.width - dx;
-            }
-            if (this.dragDirection.includes('right')) {
-              r.width = s.width + dx;
-            }
-            if (this.dragDirection.includes('top')) {
-              r.y = s.y + dy;
-              r.height = s.height - dy;
-            }
-            if (this.dragDirection.includes('bottom')) {
-              r.height = s.height + dy;
-            }
-          }
+  if (this.dragType === 'resize') {
+    let newX = s.x;
+    let newY = s.y;
+    let newWidth = s.width;
+    let newHeight = s.height;
 
-          if (this.dragType === 'move') {
-            r.x = s.x + dx;
-            r.y = s.y + dy;
-          }
-        },
+    if (this.dragDirection.includes('left')) {
+      newX = s.x + dx;
+      newWidth = s.width - dx;
+    }
+    if (this.dragDirection.includes('right')) {
+      newWidth = s.width + dx;
+    }
+    if (this.dragDirection.includes('top')) {
+      newY = s.y + dy;
+      newHeight = s.height - dy;
+    }
+    if (this.dragDirection.includes('bottom')) {
+      newHeight = s.height + dy;
+    }
 
-        endDrag() {
-          if (this.dragging && (this.dragging.width < 10 || this.dragging.height < 10)) {
-            this.rectangles = this.rectangles.filter(r => r.id !== this.dragging.id);
-          }
-          this.dragging = null;
-          this.dragType = null;
-          this.dragDirection = null;
-          this.creatingRect = false;
-          this.newRect = null;
-        }
-      }));
-    });
+    // 반전 체크 (음수 크기 보정)
+    if (newWidth < 0) {
+      newX += newWidth;
+      newWidth *= -1;
+    }
+    if (newHeight < 0) {
+      newY += newHeight;
+      newHeight *= -1;
+    }
+
+    r.x = newX;
+    r.y = newY;
+    r.width = newWidth;
+    r.height = newHeight;
+  }
+
+  if (this.dragType === 'move') {
+    r.x = s.x + dx;
+    r.y = s.y + dy;
+  }
+},
+
+endDrag() {
+  if (this.dragging && (this.dragging.width < 10 || this.dragging.height < 10)) {
+    this.rectangles = this.rectangles.filter(r => r.id !== this.dragging.id);
+  }
+  this.dragging = null;
+  this.dragType = null;
+  this.dragDirection = null;
+  this.creatingRect = false;
+  this.newRect = null;
+}
+}));
+});
   </script>
 </body>
 </html>
