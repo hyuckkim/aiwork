@@ -67,7 +67,13 @@
       </div>
     </template>
   </div>
-
+  <div class="properties" x-show="selectedRect" style="margin-top: 1rem;">
+    <h3>🛠️ 사각형 설정</h3>
+    <label>
+      색상:
+      <input type="color" x-model="selectedRect.color">
+    </label>
+  </div>
   <script>
 document.addEventListener('alpine:init', () => {
 Alpine.data('editor', () => ({
@@ -77,6 +83,7 @@ rectangles: [
 ],
 directions: ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],
 dragging: null,
+selectedRect: null,
 dragType: null,
 dragDirection: null,
 creatingRect: false,
@@ -91,6 +98,7 @@ startMove(rect, event) {
   this.startX = event.clientX;
   this.startY = event.clientY;
   this.startRect = { ...rect };
+  this.selectedRect = rect;
 },
 
 startResize(rect, direction, event) {
