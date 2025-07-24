@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Alpine.js Rectangle Editor</title>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+    }
+
+    .editor {
+      position: relative;
+      width: 800px;
+      height: 500px;
+      background-image: url('https://placekitten.com/800/500');
+      background-size: cover;
+      border: 1px solid #ccc;
+      overflow: hidden;
+    }
+
+    .rectangle {
+      position: absolute;
+      border: 2px solid;
+      box-sizing: border-box;
+      cursor: move;
+    }
+
+    .handle {
+      width: 10px;
+      height: 10px;
+      background: #fff;
+      border: 1px solid #333;
+      position: absolute;
+    }
+
+    /* 위치별 핸들 스타일 */
+    .top-left     { top: -5px; left: -5px; cursor: nw-resize; }
+    .top          { top: -5px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+    .top-right    { top: -5px; right: -5px; cursor: ne-resize; }
+    .right        { top: 50%; right: -5px; transform: translateY(-50%); cursor: e-resize; }
+    .bottom-right { bottom: -5px; right: -5px; cursor: se-resize; }
+    .bottom       { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+    .bottom-left  { bottom: -5px; left: -5px; cursor: sw-resize; }
+    .left         { top: 50%; left: -5px; transform: translateY(-50%); cursor: w-resize; }
+  </style>
+</head>
+<body x-data="editor">
+
+  <h2>📐 사각형 드래그 & 리사이즈 에디터</h2>
+
+  <div class="editor"
+       @mousedown="startCreate($event)"
+       @mousemove.window="onDrag($event)"
+       @mouseup.window="endDrag($event)"
+  >
+    <template x-for="rect in rectangles" :key="rect.id">
+      <div class="rectangle"
+           :style="`left: ${rect.x}px; top: ${rect.y}px; width: ${rect.width}px; height: ${rect.height}px; border-color: ${rect.color}`"
+           @mousedown="startMove(rect, $event)"
+      >
+        <!-- 8 방향 핸들 -->
+        <template x-for="dir in directions" :key="dir">
+          <div
+            class="handle"
+            :class="dir"
+            @mousedown.stop="startResize(rect, dir, $event)"
+          ></div>
+        </template>
+      </div>
+    </template>
+  </div>
+
+  <script>
+document.addEventListener('alpine:init', () => {
+Alpine.data('editor', () => ({
+rectangles: [
+  { id: 1, x: 100, y: 80, width: 120, height: 80, color: '#f00' },
+  { id: 2, x: 300, y: 150, width: 100, height: 120, color: '#00f' }
+],
+directions: ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],
+dragging: null,
+dragType: null,
+dragDirection: null,
+creatingRect: false,
+newRect: null,
+
+startMove(rect, event) {
+  this.dragging = rect;
+  this.dragType = 'move';
+  this.startX = event.clientX;
+  this.startY = event.clientY;
+  this.startRect = { ...rect };
+},
+
+startResize(rect, direction, event) {
+  this.dragging = rect;
+  this.dragType = 'resize';
+  this.dragDirection = direction;
+  this.startX = event.clientX;
+  this.startY = event.clientY;
+  this.startRect = { ...rect };
+},
+
+onDrag(event) {
+  if (!this.dragging) return;
+  const dx = event.clientX - this.startX;
+  const dy = event.clientY - this.startY;
+  const r = this.dragging;
+
+  if (this.dragType === 'resize') {
+    // 좌우 처리
+    if (this.dragDirection.includes('left') || this.dragDirection.includes('right')) {
+      if (dx < 0) {
+        r.x = this.startRect.x + dx;
+        r.width = this.startRect.width - dx;
+      } else {
+        r.width = this.startRect.width + dx;
+      }
+    }
+
+    // 상하 처리
+    if (this.dragDirection.includes('top') || this.dragDirection.includes('bottom')) {
+      if (dy < 0) {
+        r.y = this.startRect.y + dy;
+        r.height = this.startRect.height - dy;
+      } else {
+        r.height = this.startRect.height + dy;
+      }
+    }
+  }
+
+  if (this.dragType === 'move') {
+    r.x = this.startRect.x + dx;
+    r.y = this.startRect.y + dy;
+  }
+},
+
+
+endDrag() {
+  this.dragging = null;
+  this.dragType = null;
+  this.dragDirection = null;
+},
+
+startCreate(event) {
+  // 사각형 클릭이 아닌 배경 클릭일 때만
+  if (event.target.classList.contains('editor')) {
+    this.creatingRect = true;
+    const x = event.offsetX;
+    const y = event.offsetY;
+    const id = Date.now(); // 임시 ID
+    this.newRect = { id, x, y, width: 0, height: 0, color: '#0f0' };
+    this.rectangles.push(this.newRect);
+    this.startX = event.clientX;
+    this.startY = event.clientY;
+    this.startRect = { ...this.newRect };
+    this.dragging = this.newRect;
+    this.dragType = 'resize';
+    this.dragDirection = 'bottom-right'; // 기본 방향
+  }
+},
+
+endDrag() {
+  if (this.creatingRect) {
+    // 크기가 너무 작으면 제거
+    if (this.newRect.width < 10 || this.newRect.height < 10) {
+      this.rectangles = this.rectangles.filter(r => r.id !== this.newRect.id);
+    }
+    this.creatingRect = false;
+    this.newRect = null;
+  }
+  this.dragging = null;
+  this.dragType = null;
+  this.dragDirection = null;
+},
+      }));
+    });
+  </script>
+</body>
+</html>
