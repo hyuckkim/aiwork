@@ -145,17 +145,6 @@ body {
 
 <script>
 document.addEventListener('alpine:init', () => {
-Alpine.data('editor', () => ({
-directions: ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],
-dragging: null,
-selectedRect: null,
-dragType: null,
-dragDirection: null,
-creatingRect: false,
-newRect: null,
-startX: 0,
-startY: 0,
-startRect: null,
 /** @typedef {{
  * id: number,
  * x: number,
@@ -164,6 +153,16 @@ startRect: null,
  * color: string
 }} rectangle
 */
+Alpine.data('editor', () => ({
+directions: ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],
+/** @type {rectangle | null} */ dragging: null,
+/** @type {rectangle | null} */ selectedRect: null,
+/** @type {'move' | 'resize' | null} */ dragType: null,
+/** @type {string | null} */ dragDirection: null,
+creatingRect: false,
+startX: 0,
+startY: 0,
+/** @type {rectangle | null} */ startRect: null,
 /** @type {({img: string, rectangles: rectangle[]})[]} */
 scenes: [],
 currentScene: 0,
@@ -180,6 +179,7 @@ getEditorSize() {
   return { width: el.offsetWidth, height: el.offsetHeight };
 },
 
+/** @arg {number} val @arg {number} base*/
 toPercent(val, base) {
   return parseFloat((val / base * 100).toFixed(2));
 },
@@ -209,7 +209,7 @@ startCreate(event) {
     const x = event.offsetX;
     const y = event.offsetY;
     const id = Date.now();
-    this.newRect = {
+    var newRect = {
       id,
       x: this.toPercent(x, width),
       y: this.toPercent(y, height),
@@ -217,12 +217,12 @@ startCreate(event) {
       height: 0,
       color: '#' + Math.floor(Math.random()*16777215).toString(16)
     };
-    this.rectangles.push(this.newRect);
+    this.rectangles.push(newRect);
     this.startX = event.clientX;
     this.startY = event.clientY;
-    this.startRect = { ...this.newRect };
-    this.selectedRect = this.newRect;
-    this.dragging = this.newRect;
+    this.startRect = { ...newRect };
+    this.selectedRect = newRect;
+    this.dragging = newRect;
     this.dragType = 'resize';
     this.dragDirection = 'bottom-right';
   }
@@ -290,7 +290,6 @@ endDrag() {
   this.dragType = null;
   this.dragDirection = null;
   this.creatingRect = false;
-  this.newRect = null;
 },
 
 deleteSelected() {
