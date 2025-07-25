@@ -5,84 +5,147 @@
   <title>Alpine.js Rectangle Editor</title>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
-    body {
-      font-family: sans-serif;
-    }
+body {
+  font-family: sans-serif;
+  margin: 0;
+  display: flex; height: 100vh;
+}
 
-    .editor {
-      position: relative;
-      width: 500px;
-      height: 500px;
-      background-image: url('https://picsum.photos/500/500');
-      background-size: cover;
-      background-position: center;
-      border: 1px solid #ccc;
-      overflow: hidden;
-    }
+.ground {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-    .rectangle {
-      position: absolute;
-      border: 2px solid;
-      box-sizing: border-box;
-      cursor: move;
-    }
+.editor {
+  aspect-ratio: 1 / 1;
+  height: min(100vw, 100vh, 600px);
+  background-image: url('https://picsum.photos/600');
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+  margin: auto;
+}
 
-    .handle {
-      width: 10px;
-      height: 10px;
-      background: #fff;
-      border: 1px solid #333;
-      position: absolute;
-    }
+.rectangle {
+  position: absolute;
+  border: 2px solid;
+  box-sizing: border-box;
+  cursor: move;
+}
 
-    .top-left     { top: -5px; left: -5px; cursor: nw-resize; }
-    .top          { top: -5px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
-    .top-right    { top: -5px; right: -5px; cursor: ne-resize; }
-    .right        { top: 50%; right: -5px; transform: translateY(-50%); cursor: e-resize; }
-    .bottom-right { bottom: -5px; right: -5px; cursor: se-resize; }
-    .bottom       { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
-    .bottom-left  { bottom: -5px; left: -5px; cursor: sw-resize; }
-    .left         { top: 50%; left: -5px; transform: translateY(-50%); cursor: w-resize; }
-  </style>
+.handle {
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 1px solid #333;
+  position: absolute;
+}
+
+.top-left     { top: -5px; left: -5px; cursor: nw-resize; }
+.top          { top: -5px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+.top-right    { top: -5px; right: -5px; cursor: ne-resize; }
+.right        { top: 50%; right: -5px; transform: translateY(-50%); cursor: e-resize; }
+.bottom-right { bottom: -5px; right: -5px; cursor: se-resize; }
+.bottom       { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+.bottom-left  { bottom: -5px; left: -5px; cursor: sw-resize; }
+.left         { top: 50%; left: -5px; transform: translateY(-50%); cursor: w-resize; }
+
+.inspector {
+  width: 300px; max-width: 25vw; background: #f5f5f5;
+}
+@media (max-aspect-ratio: 5/4) {
+  body {
+    flex-direction: column;
+  }
+
+  .inspector {
+    width: 100%;
+    max-width: none;
+    height: 200px;
+    overflow: auto;
+  }
+}
+</style>
 </head>
 <body x-data="editor">
-  <h2>📐 사각형 드래그 & 리사이즈 에디터</h2>
-
+<aside class="inspector">
+<pre x-text="JSON.stringify(scenes, null, 2)"></pre>
+</aside>
+<main class="ground">
+<template x-if="scenes.length > 0">
+<div class="editor"
+      @mousedown="startCreate($event)"
+      @mousemove.window="onDrag($event)"
+      @mouseup.window="endDrag()"
+      x-ref="editorRef"
+>
+  <template x-for="rect in rectangles" :key="rect.id">
+    <div class="rectangle"
+          :style="`left: ${rect.x}%; top: ${rect.y}%; width: ${rect.width}%; height: ${rect.height}%; border-color: ${rect.color}`"
+          @mousedown="startMove(rect, $event)"
+    >
+      <template x-if="rect === selectedRect">
+      <template x-for="dir in directions" :key="dir">
+        <div
+          class="handle"
+          :class="dir"
+          @mousedown.stop="startResize(rect, dir, $event)"
+        ></div>
+      </template>
+      </template>
+    </div>
+  </template>
+</div>
+</template>
+<template x-if="scenes.length === 0">
   <div class="editor"
-       @mousedown="startCreate($event)"
-       @mousemove.window="onDrag($event)"
-       @mouseup.window="endDrag()"
+       x-ref="editorRef"
+       style="position: relative; background: #f5f5f5; cursor: pointer;"
   >
-    <template x-for="rect in rectangles" :key="rect.id">
-      <div class="rectangle"
-           :style="`left: ${rect.x}px; top: ${rect.y}px; width: ${rect.width}px; height: ${rect.height}px; border-color: ${rect.color}`"
-           @mousedown="startMove(rect, $event)"
-      >
-        <template x-for="dir in directions" :key="dir">
-          <div
-            class="handle"
-            :class="dir"
-            @mousedown.stop="startResize(rect, dir, $event)"
-          ></div>
-        </template>
-      </div>
-    </template>
+    <svg
+      width="100"
+      height="100"
+      viewBox="0 0 100 100"
+      style="
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        opacity: 0.6;
+        transition: opacity 0.3s;
+      "
+    >
+      <circle cx="50" cy="50" r="45" fill="#eeeeee" stroke="#999999" stroke-width="2"/>
+      <line x1="50" y1="30" x2="50" y2="70" stroke="#666666" stroke-width="6" stroke-linecap="round"/>
+      <line x1="30" y1="50" x2="70" y2="50" stroke="#666666" stroke-width="6" stroke-linecap="round"/>
+    </svg>
   </div>
-  <div class="properties" x-show="selectedRect" style="margin-top: 1rem;">
-    <h3>🛠️ 사각형 설정</h3>
-    <label>
-      색상:
-      <input type="color" x-model="selectedRect.color">
-    </label>
-    <br><br>
-    <button @click="deleteSelected()" style="background: #f44336; color: white; border: none; padding: 5px 10px; cursor: pointer;">
-      🗑️ 삭제하기
-    </button>
-  </div>
-  <script>
+</template>
+
+
+</main>
+
+<aside class="inspector">
+<template x-if="selectedRect !== null">
+<div class="properties" x-show="selectedRect" style="margin-top: 1rem;">
+  <label>
+    색상:
+    <input type="color" x-model="selectedRect.color">
+  </label>
+  <br><br>
+  <button @click="deleteSelected()" style="background: #f44336; color: white; border: none; padding: 5px 10px; cursor: pointer;">
+    🗑️ 삭제하기
+  </button>
+</div>
+</template>
+</aside>
+
+<script>
 document.addEventListener('alpine:init', () => {
 Alpine.data('editor', () => ({
-rectangles: [],
 directions: ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],
 dragging: null,
 selectedRect: null,
@@ -93,6 +156,33 @@ newRect: null,
 startX: 0,
 startY: 0,
 startRect: null,
+/** @typedef {{
+ * id: number,
+ * x: number,
+ * width: number,
+ * height: number,
+ * color: string
+}} rectangle
+*/
+/** @type {({img: string, rectangles: rectangle[]})[]} */
+scenes: [],
+currentScene: 0,
+
+get rectangles() {
+  return this.scenes[this.currentScene].rectangles;
+},
+set rectangles(val) {
+  this.scenes[this.curentScene].rectangles = val;
+},
+
+getEditorSize() {
+  const el = this.$refs.editorRef;
+  return { width: el.offsetWidth, height: el.offsetHeight };
+},
+
+toPercent(val, base) {
+  return parseFloat((val / base * 100).toFixed(2));
+},
 
 startMove(rect, event) {
   this.dragging = rect;
@@ -114,11 +204,19 @@ startResize(rect, direction, event) {
 
 startCreate(event) {
   if (event.target.classList.contains('editor')) {
+    const { width, height } = this.getEditorSize();
     this.creatingRect = true;
     const x = event.offsetX;
     const y = event.offsetY;
     const id = Date.now();
-    this.newRect = { id, x, y, width: 0, height: 0, color: '#' + Math.floor(Math.random()*16777215).toString(16) };
+    this.newRect = {
+      id,
+      x: this.toPercent(x, width),
+      y: this.toPercent(y, height),
+      width: 0,
+      height: 0,
+      color: '#' + Math.floor(Math.random()*16777215).toString(16)
+    };
     this.rectangles.push(this.newRect);
     this.startX = event.clientX;
     this.startY = event.clientY;
@@ -136,6 +234,10 @@ onDrag(event) {
   const dy = event.clientY - this.startY;
   const r = this.dragging;
   const s = this.startRect;
+  const { width, height } = this.getEditorSize();
+
+  let pxDX = dx / width * 100;
+  let pxDY = dy / height * 100;
 
   if (this.dragType === 'resize') {
     let newX = s.x;
@@ -144,21 +246,21 @@ onDrag(event) {
     let newHeight = s.height;
 
     if (this.dragDirection.includes('left')) {
-      newX = s.x + dx;
-      newWidth = s.width - dx;
+      newX = s.x + pxDX;
+      newWidth = s.width - pxDX;
     }
     if (this.dragDirection.includes('right')) {
-      newWidth = s.width + dx;
+      newWidth = s.width + pxDX;
     }
     if (this.dragDirection.includes('top')) {
-      newY = s.y + dy;
-      newHeight = s.height - dy;
+      newY = s.y + pxDY;
+      newHeight = s.height - pxDY;
     }
     if (this.dragDirection.includes('bottom')) {
-      newHeight = s.height + dy;
+      newHeight = s.height + pxDY;
     }
 
-    // 반전 체크 (음수 크기 보정)
+    // 반전 보정
     if (newWidth < 0) {
       newX += newWidth;
       newWidth *= -1;
@@ -168,21 +270,21 @@ onDrag(event) {
       newHeight *= -1;
     }
 
-    r.x = newX;
-    r.y = newY;
-    r.width = newWidth;
-    r.height = newHeight;
+    r.x = parseFloat(newX.toFixed(2));
+    r.y = parseFloat(newY.toFixed(2));
+    r.width = parseFloat(newWidth.toFixed(2));
+    r.height = parseFloat(newHeight.toFixed(2));
   }
 
   if (this.dragType === 'move') {
-    r.x = s.x + dx;
-    r.y = s.y + dy;
+    r.x = parseFloat((s.x + pxDX).toFixed(2));
+    r.y = parseFloat((s.y + pxDY).toFixed(2));
   }
 },
 
 endDrag() {
-  if (this.dragging && (this.dragging.width < 10 || this.dragging.height < 10)) {
-    this.rectangles = this.rectangles.filter(r => r.id !== this.dragging.id);
+  if (this.dragging && (this.dragging.width < 1 || this.dragging.height < 1)) {
+    this.deleteSelected();
   }
   this.dragging = null;
   this.dragType = null;
