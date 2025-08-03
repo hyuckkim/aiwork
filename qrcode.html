@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko" x-data="qrApp()" x-init="init()" class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QR 생성 & 스캔 PWA</title>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <style>
+    /* 스크롤바 등 Tailwind 커스텀 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #4b5563; /* gray-600 */
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4">
+  <div class="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 flex flex-col gap-4">
+
+    <!-- 탭 버튼 -->
+    <div class="flex justify-center gap-6 mb-4">
+      <button
+        :class="activeTab==='generate' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-blue-600'"
+        @click="activeTab='generate'"
+        class="pb-2 font-semibold"
+      >QR 생성</button>
+
+      <button
+        :class="activeTab==='scan' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-blue-600'"
+        @click="activeTab='scan'"
+        class="pb-2 font-semibold"
+      >QR 스캔</button>
+    </div>
+
+    <!-- 생성 탭 -->
+    <template x-if="activeTab==='generate'">
+      <section class="flex flex-col gap-4">
+        <textarea
+          x-model="textToEncode"
+          placeholder="여기에 텍스트 입력"
+          class="w-full h-24 p-3 rounded-xl border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+        ></textarea>
+
+        <div class="flex justify-center">
+          <canvas id="qrCanvas" class="rounded-xl border border-gray-300 dark:border-gray-700"></canvas>
+        </div>
+
+        <div class="flex justify-center gap-4 mt-2">
+          <button
+            @click="downloadQR()"
+            class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
+          >
+            <!-- Lucide download icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            저장
+          </button>
+          <button
+            @click="copyQRText()"
+            class="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl"
+          >
+            <!-- Lucide copy icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            복사
+          </button>
+        </div>
+      </section>
+    </template>
+
+    <!-- 스캔 탭 -->
+    <template x-if="activeTab==='scan'">
+      <section class="flex flex-col gap-4 items-center">
+        <video
+          id="video"
+          autoplay
+          playsinline
+          class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-black"
+        ></video>
+
+        <div
+          x-text="scannedText ? scannedText : 'QR 코드를 스캔하면 결과가 여기에 표시됩니다.'"
+          class="min-h-[3rem] p-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 w-full text-center select-all"
+        ></div>
+
+        <div class="flex justify-center gap-4 mt-2">
+          <button
+            @click="copyScannedText()"
+            :disabled="!scannedText"
+            class="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <!-- Lucide copy icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            복사
+          </button>
+        </div>
+      </section>
+    </template>
+  </div>
+
+  <script>
+    function qrApp() {
+      return {
+        activeTab: 'generate',
+        textToEncode: '',
+        scannedText: '',
+        qrCanvas: null,
+        videoEl: null,
+        stream: null,
+
+        init() {
+          this.qrCanvas = document.getElementById('qrCanvas');
+          this.videoEl = document.getElementById('video');
+          this.generateQR();
+
+          // 텍스트 변경 시 QR 갱신
+          this.$watch('textToEncode', value => {
+            this.generateQR();
+          });
+
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            this.startCamera();
+          }
+        },
+
+        generateQR() {
+          if (!this.textToEncode) {
+            const ctx = this.qrCanvas.getContext('2d');
+            ctx.clearRect(0, 0, this.qrCanvas.width, this.qrCanvas.height);
+            return;
+          }
+          QRCode.toCanvas(this.qrCanvas, this.textToEncode, {
+            width: 200,
+            margin: 2,
+            color: {
+              dark: '#000000',
+              light: '#ffffff'
+            }
+          }, function (error) {
+            if (error) console.error(error);
+          });
+        },
+
+        downloadQR() {
+          if (!this.textToEncode) return;
+          const link = document.createElement('a');
+          link.download = 'qrcode.png';
+          link.href = this.qrCanvas.toDataURL();
+          link.click();
+        },
+
+        copyQRText() {
+          if (!this.textToEncode) return;
+          navigator.clipboard.writeText(this.textToEncode)
+            .then(() => alert('텍스트가 복사되었습니다.'))
+            .catch(() => alert('복사에 실패했습니다.'));
+        },
+
+        startCamera() {
+          navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+              this.stream = stream;
+              this.videoEl.srcObject = stream;
+              this.scanLoop();
+            })
+            .catch(err => {
+              console.error('카메라 접근 실패:', err);
+            });
+        },
+
+        scanLoop() {
+          if (!this.stream) return;
+
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+
+          const scan = () => {
+            if (this.activeTab !== 'scan') return;
+
+            canvas.width = this.videoEl.videoWidth;
+            canvas.height = this.videoEl.videoHeight;
+            ctx.drawImage(this.videoEl, 0, 0, canvas.width, canvas.height);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            // jsQR을 직접 넣어주셔야 합니다. (별도 스크립트 추가 필요)
+            // 예: const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+            // if (code) {
+            //   this.scannedText = code.data;
+            // } else {
+            //   this.scannedText = '';
+            // }
+
+            requestAnimationFrame(scan);
+          };
+          scan();
+        },
+
+        copyScannedText() {
+          if (!this.scannedText) return;
+          navigator.clipboard.writeText(this.scannedText)
+            .then(() => alert('스캔 결과가 복사되었습니다.'))
+            .catch(() => alert('복사에 실패했습니다.'));
+        }
+      };
+    }
+  </script>
+</body>
+</html>
