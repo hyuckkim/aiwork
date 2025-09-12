@@ -1,30 +1,46 @@
 <!doctype html>
 <html lang="ko">
+
 <head>
-<meta charset="utf-8">
-<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-<style>
-main{margin:auto}table{margin:auto;border-collapse:collapse}th,td{width:80px;height:80px;padding:.5rem;text-align:center;border:1px solid #ccc;cursor:pointer}th.select{background:#def}.hl,.highlight{background-color:#fcf}.bf,.highlight-buffer{background-color:#cff}.hl,.bf{display:inline-block;width:1em;height:1em;border-radius:50%}.action-panel{margin-top:1.5rem;padding:1rem 1.5rem;background:#f9f9ff;border:1px solid #ccd;border-radius:8px;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;font-size:1.05rem}.action-panel select{padding:.3rem .5rem;border:1px solid #bbb;border-radius:6px;font-size:1rem;background:#fff}.action-panel button{padding:.4rem .7rem;border:none;border-radius:4px;font-size:1rem;cursor:pointer}.neg-inactive{background:none;color:#ccc;border:1px solid #ccc}.neg-active{background:none;color:#000;border:1px solid #000}.fraction-preview{margin-left:.4rem;font-size:.95rem;color:#556}
-</style>
+  <meta charset="utf-8">
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>main{margin:auto}.top-panel{display:grid;grid-template-columns:1fr auto 1fr}.button-slot{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;margin:2px}.button-slot button{padding:10px 20px;border:1px solid #000;border-radius:5px}.info-slot{display:flex;flex-direction:column;justify-content:flex-end;margin:2px}table{border-collapse:collapse}button{cursor:pointer}button:disabled{cursor:auto}th,td{width:80px;height:80px;padding:.5rem;text-align:center;border:1px solid #ccc;cursor:pointer;font-size:large}th.select{background:#def}.hl,.highlight{background-color:#fcf}.bf,.highlight-buffer{background-color:#cff}.hl,.bf{display:inline-block;width:1em;height:1em;border-radius:50%}.action-panel{margin-top:1.5rem;padding:1rem 1.5rem;background:#f9f9ff;border:1px solid #ccd;border-radius:8px;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;font-size:1.05rem}.action-panel select{padding:.3rem .5rem;font-size:1rem;background:#fff;border:none}.numbox select:first-child{border-bottom:1px solid #000}.number-box{display:flex;padding:2px;border-radius:5px}.numbox{display:flex;flex-direction:column;border:none}.action-panel button{border:none;border-radius:4px;font-size:1rem}.neg-inactive{background:none;color:#ccc;border:1px solid #ccc}.neg-active{background:none;color:#000;font-weight:bold}.fraction-preview{margin-left:.4rem;font-size:.95rem;color:#556}button.do{padding:10px 20px;border:1px solid #000;margin-left:auto;justify-self:end}
+  </style>
 </head>
+
 <body>
-<main class="container" x-data="matrixGame()">
-  <table>
-    <tbody>
-      <template x-for="i in n" :key="i">
-        <tr>
-          <template x-for="j in n" :key="j">
-            <td :class="{
+  <main class="container" x-data="matrixGame()">
+    <div class="top-panel">
+      <div class="button-slot">
+        <div class="button">크기: 
+          <select x-model.number="n">
+            <template x-for="i in [1,2,3,4,5,6,7,8,9]" :key="i">
+              <option :value="i" x-text="i" :selected="i===n"></option>
+            </template>
+          </select>
+        </div>
+        <button @click="changeMode">행 / 열 전환</button>
+      </div>
+    <table>
+      <tbody>
+        <template x-for="i in n" :key="i">
+          <tr>
+            <template x-for="j in n" :key="j">
+              <td :class="{
               'highlight': selected === (mode === 'row' ? j : i),
-              'highlight-buffer': buffer === (mode === 'row' ? j : i)}"
-             x-text="A[i-1][j-1].toFixed(1)" @click="selectCol(i)"></td>
-          </template>
-        </tr>
-      </template>
-    </tbody>
-  </table>
-<div class="action-panel"
-     x-data="{
+              'highlight-buffer': buffer === (mode === 'row' ? j : i)}" x-text="A[i-1][j-1].toFixed(2) + (preview !== null && A[i-1][j-1] !== preview[i-1][j-1] ? 
+              ('\n →' + preview[i-1][j-1].toFixed(2)) : '')"
+                @click="selectCol(mode === 'row' ? j : i)"></td>
+            </template>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <div class="info-slot">
+      <span>이동 횟수: <span x-text="moves"></span></span>
+    </div>
+    </div>
+    <div class="action-panel" x-data="{
        num: 1,
        den: 1,
        numNeg: false,
@@ -35,32 +51,35 @@ main{margin:auto}table{margin:auto;border-collapse:collapse}th,td{width:80px;hei
        },
      }">
 
-  <span class="hl"></span>에 
-  <span class="bf"></span>의
+      <span class="hl"></span>에
+      <span class="bf"></span>의
 
-  <!-- 분자 -->
-  <button
-          @click="numNeg = !numNeg"
-          :class="{'neg-active': numNeg, 'neg-inactive': !numNeg}">−</button>
-  <select x-model.number="num">
-    <template x-for="n in numbers" :key="'n'+n">
-      <option :value="n" x-text="n"></option>
-    </template>
-  </select>
-/
-  <!-- 분모 (양수만) -->
-  <select x-model.number="den">
-    <template x-for="d in numbers" :key="'d'+d">
-      <option :value="d" x-text="d"></option>
-    </template>
-  </select>
+      <div class="number-box">
+        <button @click="numNeg = !numNeg" :class="{'neg-active': numNeg, 'neg-inactive': !numNeg}">−</button>
+        <div class="numbox">
+          <select x-model.number="num">
+            <template x-for="n in numbers" :key="'n'+n">
+              <option :value="n" x-text="n"></option>
+            </template>
+          </select>
+          <select x-model.number="den">
+            <template x-for="d in numbers" :key="'d'+d">
+              <option :value="d" x-text="d"></option>
+            </template>
+          </select>
+        </div>
+      </div>
 
-  배 만큼 더하기
-  <button @click="addi(factor)">실행!</button>
-</div>
-<!-- 곱하기: 선택된 행/열에 factor배 곱하기 -->
-<div class="action-panel"
-     x-data="{
+      배 만큼 더하기
+      <button class="do" @click="addi(factor)"
+      @mouseover="setPreview('addi')"
+      @mouseout="setPreview('')"
+      x-bind:disabled="buffer === null">
+        실행!
+      </button>
+    </div>
+    <!-- 곱하기: 선택된 행/열에 factor배 곱하기 -->
+    <div class="action-panel" x-data="{
        mNum: 1,
        mDen: 1,
        mNeg: false,
@@ -70,110 +89,203 @@ main{margin:auto}table{margin:auto;border-collapse:collapse}th,td{width:80px;hei
          return n / this.mDen;
        },
      }">
-  <span class="hl"></span>을
+      <span class="hl"></span>을
 
-  <!-- 분자(부호 토글) -->
-  <button
-    @click="mNeg = !mNeg"
-    :class="{'neg-active': mNeg, 'neg-inactive': !mNeg}">−</button>
+      <div class="number-box">
+        <button @click="mNeg = !mNeg" :class="{'neg-active': mNeg, 'neg-inactive': !mNeg}">−</button>
+        <div class="numbox">
+          <select x-model.number="mNum">
+            <template x-for="n in numbers" :key="'m-n'+n">
+              <option :value="n" x-text="n"></option>
+            </template>
+          </select>
+      <!-- 분모 (양수만) -->
+          <select x-model.number="mDen">
+            <template x-for="d in numbers" :key="'m-d'+d">
+              <option :value="d" x-text="d"></option>
+            </template>
+          </select>
+        </div>
+      </div>
 
-  <select x-model.number="mNum">
-    <template x-for="n in numbers" :key="'m-n'+n">
-      <option :value="n" x-text="n"></option>
-    </template>
-  </select>
+      배 만큼 곱하기
+      <button class="do" @click="mult(factor)" x-bind:disabled="selected === null"
+      @mouseover="setPreview('mult')"
+      @mouseout="setPreview('')">
+        실행!
+      </button>
+    </div>
 
-  <span>/</span>
+    <!-- 스왑: 선택된 두 대상 서로 교환 -->
+    <div class="action-panel">
+      <span class="hl"></span>과 <span class="bf"></span>를 서로 바꾸기
+      <button class="do" @click="swap()" x-bind:disabled="buffer === null"
+      @mouseover="setPreview('swap')"
+      @mouseout="setPreview('')">
+        실행!
+      </button>
+  </main>
 
-  <!-- 분모 (양수만) -->
-  <select x-model.number="mDen">
-    <template x-for="d in numbers" :key="'m-d'+d">
-      <option :value="d" x-text="d"></option>
-    </template>
-  </select>
-
-  배 만큼 곱하기
-  <button @click="mult(factor)">실행!</button>
-</div>
-
-<!-- 스왑: 선택된 두 대상 서로 교환 -->
-<div class="action-panel">
-  <span class="hl"></span>과 <span class="bf"></span>를 서로 바꾸기
-  <button
-    @click="swap()">
-    실행!
-  </button>
-</main>
-
-<script>
-function matrixGame(){
-  return {
-    n: 3,
-    A: [[2,1,0],[0,1,1],[1,0,1]],
-    selected: null,
-    buffer: null,
-    mode: 'col', // or row
-    selectCol(i){
-      this.buffer = this.selected;
-      this.selected = i;
-      if (this.buffer === this.selected) this.buffer = null;
-    },addi(factor) {
-      if (this.selected === null || this.buffer === null) return;
-
-      const sel = this.selected - 1;
-      const buf = this.buffer - 1;
-
-      if (this.mode === 'col') {
-        // 행 연산: sel행 ← sel행 + buf행 × factor
-        for (let i = 0; i < this.A[0].length; i++) {
-          this.A[sel][i] += this.A[buf][i] * factor;
-        }
-      } else if (this.mode === 'row') {
-        // 열 연산: sel열 ← sel열 + buf열 × factor
-        for (let i = 0; i < this.A.length; i++) {
-          this.A[i][sel] += this.A[i][buf] * factor;
+  <script>
+    function generateMatrix(len) {
+      const result = [];
+      for (let i = 0; i < len; i++) {
+        result.push([]);
+        for (let j = 0; j < len; j++) {
+          result[i].push(Math.floor(Math.random() * 5))
         }
       }
-    },
+      return result;
+    }
+    // 행 연산: sel행 ← sel행 + buf행 × factor
+    // 열 연산: sel열 ← sel열 + buf열 × factor
+    function addi_f(matrix, selected, buffer, mode, factor) {
+      if (selected == null || buffer == null) return matrix;
 
-    swap() {
-      if (this.selected === null || this.buffer === null) return;
-      const sel = this.selected - 1;
-      const buf = this.buffer - 1;
+      const sel = selected - 1;
+      const buf = buffer - 1;
 
-      if (this.mode === 'col') {
-        // 행 스왑
-        const temp = this.A[sel];
-        this.A[sel] = this.A[buf];
-        this.A[buf] = temp;
-      } else if (this.mode === 'row') {
-        // 열 스왑
-        for (let i = 0; i < this.A.length; i++) {
-          const temp = this.A[i][sel];
-          this.A[i][sel] = this.A[i][buf];
-          this.A[i][buf] = temp;
+      // 깊은 복사
+      const newMatrix = matrix.map(row => [...row]);
+
+      if (mode === 'col') {
+        for (let i = 0; i < newMatrix[0].length; i++) {
+          newMatrix[sel][i] += newMatrix[buf][i] * factor;
+        }
+      } else if (mode === 'row') {
+        for (let i = 0; i < newMatrix.length; i++) {
+          newMatrix[i][sel] += newMatrix[i][buf] * factor;
         }
       }
-    },
-    mult(factor) {
-      if (this.selected === null) return;
 
-      const sel = this.selected - 1;
+      return newMatrix;
+    }
 
-      if (this.mode === 'col') {
-        // 행 전체를 factor배
-        for (let i = 0; i < this.A[0].length; i++) {
-          this.A[sel][i] *= factor;
+    // 행 스왑 또는 열 스왑
+    function swap_f(matrix, selected, buffer, mode) {
+      if (selected == null || buffer == null) return matrix;
+
+      const sel = selected - 1;
+      const buf = buffer - 1;
+
+      const newMatrix = matrix.map(row => [...row]);
+
+      if (mode === 'col') {
+        const temp = newMatrix[sel];
+        newMatrix[sel] = newMatrix[buf];
+        newMatrix[buf] = temp;
+      } else if (mode === 'row') {
+        for (let i = 0; i < newMatrix.length; i++) {
+          const temp = newMatrix[i][sel];
+          newMatrix[i][sel] = newMatrix[i][buf];
+          newMatrix[i][buf] = temp;
         }
-      } else if (this.mode === 'row') {
-        // 열 전체를 factor배
-        for (let i = 0; i < this.A.length; i++) {
-          this.A[i][sel] *= factor;
+      }
+
+      return newMatrix;
+    }
+
+    // 행 전체 또는 열 전체를 factor배
+    function mult_f(matrix, selected, mode, factor) {
+      if (selected == null) return matrix;
+
+      const sel = selected - 1;
+      const newMatrix = matrix.map(row => [...row]);
+
+      if (mode === 'col') {
+        for (let i = 0; i < newMatrix[0].length; i++) {
+          newMatrix[sel][i] *= factor;
+        }
+      } else if (mode === 'row') {
+        for (let i = 0; i < newMatrix.length; i++) {
+          newMatrix[i][sel] *= factor;
+        }
+      }
+
+      return newMatrix;
+    }
+    function matrixGame() {
+      return {
+        _n: 3,
+        get n() { return this._n; },
+        set n(val) { this._n = val; this.changeSize(val); },
+        A: generateMatrix(3),
+        preview: null,
+        selected: null,
+        buffer: null,
+        mode: 'col', // or row,
+        moves: 0,
+        generateMatrix,
+        changeMode() {
+          if (this.mode === 'col') this.mode = 'row';
+          else this.mode = 'col';
+          this.reset();
+        },
+        changeSize(size) {
+          this.A = generateMatrix(size);
+          this.reset();
+        },
+        reset() {
+          this.moves = 0;
+          this.selected = null;
+          this.buffer = null;
+        },
+        setPreview(opt) {
+          switch (opt) {
+            case 'addi':
+              this.preview = addi_f(
+                this.A,
+                this.selected,
+                this.buffer,
+                this.mode,
+                this.factor // factor 값이 data나 computed에 있다고 가정
+              );
+              break;
+
+            case 'swap':
+              this.preview = swap_f(
+                this.A,
+                this.selected,
+                this.buffer,
+                this.mode
+              );
+              break;
+
+            case 'mult':
+              this.preview = mult_f(
+                this.A,
+                this.selected,
+                this.mode,
+                this.factor
+              );
+              break;
+
+            default:
+              this.preview = null;
+              return;
+          }
+        },
+        selectCol(i) {
+          this.buffer = this.selected;
+          this.selected = i;
+          if (this.buffer === this.selected) this.buffer = null;
+        },
+        addi(factor) {
+          this.A = addi_f(this.A, this.selected, this.buffer, this.mode, factor);
+          this.moves++;
+        },
+
+        swap() {
+          this.A = swap_f(this.A, this.selected, this.buffer, this.mode);
+          this.moves++;
+        },
+
+        mult(factor) {
+          this.A = mult_f(this.A, this.selected, this.mode, factor);
+          this.moves++;
         }
       }
     }
-  }
-}
-</script>
+  </script>
 </body>
 </html>
