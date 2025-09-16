@@ -16,6 +16,13 @@ input.line-input { width:100%; border:none; outline:none; padding:4px 8px; borde
   white-space: pre;  /* 텍스트 자동 줄 바꿈 방지 */
   overflow-x: auto;     /* 길면 가로 스크롤 가능 */
 }
+    .line, .line-input {
+      min-height: 2em;       /* 최소 높이 동일 */
+      line-height: 2em;      /* 텍스트 높이 동일 */
+      padding: 4px 8px;      /* 패딩 동일 */
+      font-size: 16px;       /* 글자 크기 동일 */
+      box-sizing: border-box;
+    }
     .toolbar {
       position: sticky;      /* 스크롤 시 상단에 고정 */
       top: 0;                /* 화면 최상단 */
@@ -26,13 +33,6 @@ input.line-input { width:100%; border:none; outline:none; padding:4px 8px; borde
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
-    }
-
-    /* optional: 모바일에서 패딩 증가 */
-    @media (max-width: 768px) {
-      .toolbar {
-        padding: 10px;
-      }
     }
     </style>
   </head>
@@ -207,13 +207,13 @@ input.line-input { width:100%; border:none; outline:none; padding:4px 8px; borde
           insertLine(i, event) {
             const input = event.target;
             const cursorPos = input.selectionStart;
-            const value = input.value; // 최신 값 사용
+            const value = input.value; // 최신 입력값
+
             const before = value.slice(0, cursorPos);
             const after = value.slice(cursorPos);
-
             const cmd = {
               do: () => {
-                // 기존 줄과 새 줄로 분리
+                // 기존 줄을 두 줄로 나누기
                 this.lines.splice(i, 1, before, after);
 
                 // DOM 렌더링 후 커서 이동
