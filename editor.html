@@ -72,9 +72,13 @@ input.line-input { width:100%; border:none; outline:none; padding:4px 8px; borde
   <template x-if="mode==='text'">
     <div>
       <template x-for="(line,i) in lines" :key="i">
-<input class="line-input" type="text"
-       x-model="lines[i]"
-       @keyup.enter.prevent="insertLine(i,$event)" />
+<input
+  class="line-input"
+  type="text"
+  x-model="lines[i]"
+  @keyup.enter.prevent="insertLine(i, $event)"
+  enterkeyhint="enter"
+/>
       </template>
     </div>
   </template>
