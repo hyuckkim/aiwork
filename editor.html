@@ -13,7 +13,7 @@ body { font-family:sans-serif; margin:0; }
 .line:empty::before { content:"\00a0"; }
 input.line-input { width:100%; border:none; outline:none; padding:4px 8px; border-bottom:1px dashed #ddd; font-family:inherit; font-size:inherit; }
 .line, .line-input {
-  white-space: nowrap;  /* 텍스트 자동 줄 바꿈 방지 */
+  white-space: pre;  /* 텍스트 자동 줄 바꿈 방지 */
   overflow-x: auto;     /* 길면 가로 스크롤 가능 */
 }
     .toolbar {
@@ -94,10 +94,25 @@ input.line-input { width:100%; border:none; outline:none; padding:4px 8px; borde
 
           toggleMode(){ this.mode = this.mode==="editor" ? "text":"editor"; this.selection=null; },
 
-          toggleSelect(i){
-            if(!this.selection){ this.selection={start:i,end:i}; return; }
-            this.selection.end=i;
-            if(this.selection.end<this.selection.start) [this.selection.start,this.selection.end]=[this.selection.end,this.selection.start];
+          toggleSelect(i) {
+            if (!this.selection) {
+              // 처음 클릭: start = end = i
+              this.selection = { start: i, end: i };
+              this.lastClicked = i; // 최근 클릭 기록
+              return;
+            }
+
+            // 최근 클릭한 쪽을 기준으로 범위 조정
+            if (i >= this.lastClicked) {
+              this.selection.start = this.lastClicked;
+              this.selection.end = i;
+            } else {
+              this.selection.start = i;
+              this.selection.end = this.lastClicked;
+            }
+
+            // 최근 클릭 업데이트
+            this.lastClicked = i;
           },
 
           getSelectedLines(){
