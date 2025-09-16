@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vi-inspired Editor Final</title>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+body { font-family:sans-serif; margin:0; }
+.toolbar { display:flex; gap:8px; padding:6px; background:#eee; border-bottom:1px solid #ccc; flex-wrap:wrap; }
+.line { padding:4px 8px; border-bottom:1px dashed #ddd; cursor:pointer; min-height:1.5em; }
+.line.selected { background:#d0ebff; }
+.line:empty::before { content:"\00a0"; }
+input.line-input { width:100%; border:none; outline:none; padding:4px 8px; border-bottom:1px dashed #ddd; font-family:inherit; font-size:inherit; }
+.line, .line-input {
+  white-space: nowrap;  /* 텍스트 자동 줄 바꿈 방지 */
+  overflow-x: auto;     /* 길면 가로 스크롤 가능 */
+}
+    .toolbar {
+      position: sticky;      /* 스크롤 시 상단에 고정 */
+      top: 0;                /* 화면 최상단 */
+      z-index: 1000;         /* 다른 요소 위에 표시 */
+      background: #eee;
+      padding: 6px;
+      border-bottom: 1px solid #ccc;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* optional: 모바일에서 패딩 증가 */
+    @media (max-width: 768px) {
+      .toolbar {
+        padding: 10px;
+      }
+    }
+    </style>
+  </head>
+  <body x-data="editorApp">
+
+    <!-- 툴바 -->
+    <div class="toolbar">
+      <button @click="toggleMode()">모드: <span x-text="mode"></span></button>
+      <template x-if="mode==='editor'">
+        <div style="display:flex; gap:4px;">
+          <button @click="manualCut()">✂ 잘라내기</button>
+          <button @click="manualCopy()">📄 복사</button>
+          <button @click="paste()">📋 붙여넣기</button>
+          <button @click="replace()">♻ 치환</button>
+          <button @click="selectAll()">전체 선택</button>
+          <button @click="deleteSelection()">선택 영역 삭제</button>
+        </div>
+      </template>
+      <button @click="undo()" :disabled="undoStack.length===0">↩ undo</button>
+      <button @click="redo()" :disabled="redoStack.length===0">↪ redo</button>
+    </div>
+
+    <!-- 본문 -->
+    <div>
+      <!-- 에디터 모드 -->
+      <template x-if="mode==='editor'">
+        <div>
+          <template x-for="(line, i) in lines" :key="i">
+            <div class="line"
+                 :class="{selected: selection && i>=selection.start && i<=selection.end}"
+                 @click="toggleSelect(i)"
+                 x-text="line">
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- 텍스트 모드 -->
+      <template x-if="mode==='text'">
+        <div>
+          <template x-for="(line,i) in lines" :key="i">
+            <input class="line-input" type="text"
+                                      :value="line"
+                                      @input="lines[i]=$event.target.value"
+                                      @keydown.enter.prevent="insertLine(i,$event)" />
+          </template>
+        </div>
+      </template>
+    </div>
+
+    <script>
+      document.addEventListener("alpine:init",()=>{
+        Alpine.data("editorApp",()=>({
+          mode:"editor",
+          lines:["첫 줄","둘째 줄","셋째 줄"],
+          selection:null,
+          undoStack:[],
+          redoStack:[],
+
+          toggleMode(){ this.mode = this.mode==="editor" ? "text":"editor"; this.selection=null; },
+
+          toggleSelect(i){
+            if(!this.selection){ this.selection={start:i,end:i}; return; }
+            this.selection.end=i;
+            if(this.selection.end<this.selection.start) [this.selection.start,this.selection.end]=[this.selection.end,this.selection.start];
+          },
+
+          getSelectedLines(){
+            if(!this.selection) return [];
+            return this.lines.slice(this.selection.start,this.selection.end+1);
+          },
+          selectAll() {
+            if(this.lines.length === 0) return;
+            this.selection = { start: 0, end: this.lines.length - 1 };
+          },
+
+          deleteSelection() {
+            if(!this.selection) return;
+            const { start, end } = this.selection;
+            const oldLines = this.lines.slice(start, end + 1);
+
+            const cmd = {
+              do: () => {
+                this.lines.splice(start, end - start + 1);
+                this.selection = null;
+              },
+              undo: () => {
+                this.lines.splice(start, 0, ...oldLines);
+              }
+            };
+
+            this.execute(cmd);
+          },
+
+          execute(cmd){
+            cmd.do();
+            this.undoStack.push(cmd);
+            this.redoStack=[];
+          },
+
+          async writeClipboard(text,manual=false){
+            if(!manual) return;
+            try{ await navigator.clipboard.writeText(text); }
+            catch(e){ console.warn("Clipboard write failed",e); }
+          },
+
+          manualCopy(){
+            if(!this.selection) return;
+            const text = this.getSelectedLines().join('\n');
+            this.writeClipboard(text,true);
+            this.selection=null;
+          },
+
+          manualCut(){
+            if(!this.selection) return;
+            const {start,end}=this.selection;
+            const oldLines = this.getSelectedLines();
+            const cmd = {
+              do:()=>{ this.lines.splice(start,end-start+1); this.selection=null; },
+              undo:()=>{ this.lines.splice(start,0,...oldLines); },
+              manual:()=>this.writeClipboard(oldLines.join('\n'),true)
+            };
+            this.execute(cmd);
+            cmd.manual();
+          },
+
+          async paste(){
+            try{
+              const text = await navigator.clipboard.readText();
+              if(!text) return;
+              const linesToInsert = text.split('\n');
+              const index = this.selection ? this.selection.end : this.lines.length-1;
+              const cmd = {
+                do:()=>{ this.lines.splice(index+1,0,...linesToInsert); this.selection=null; },
+                undo:()=>{ this.lines.splice(index+1,linesToInsert.length); }
+              };
+              this.execute(cmd);
+            }catch(e){ console.warn("Clipboard read failed",e); }
+          },
+
+          async replace(){
+            if(!this.selection) return;
+            const {start,end}=this.selection;
+            try{
+              const text = await navigator.clipboard.readText();
+              if(!text) return;
+              const newLines = text.split('\n');
+              const oldLines = this.lines.slice(start,end+1);
+              const cmd = {
+                do:()=>{ this.lines.splice(start,end-start+1,...newLines); this.selection=null; },
+                undo:()=>{ this.lines.splice(start,newLines.length,...oldLines); }
+              };
+              this.execute(cmd);
+            }catch(e){ console.warn("Clipboard read failed",e); }
+          },
+
+          insertLine(i, event) {
+            const input = event.target;
+            const cursorPos = input.selectionStart;
+            const value = input.value; // 최신 값 사용
+            const before = value.slice(0, cursorPos);
+            const after = value.slice(cursorPos);
+
+            const cmd = {
+              do: () => {
+                // 기존 줄과 새 줄로 분리
+                this.lines.splice(i, 1, before, after);
+
+                // DOM 렌더링 후 커서 이동
+                setTimeout(() => {
+                  const inputs = document.querySelectorAll('input.line-input');
+                  const nextInput = inputs[i + 1];
+                  if (nextInput) {
+                    nextInput.focus();
+                    nextInput.setSelectionRange(0, 0);
+                  }
+                }, 0);
+              },
+              undo: () => {
+                this.lines.splice(i, 2, value);
+                setTimeout(() => {
+                  const inputs = document.querySelectorAll('input.line-input');
+                  if (inputs[i]) inputs[i].focus();
+                }, 0);
+              }
+            };
+
+            this.execute(cmd);
+          },
+
+          undo(){
+            if(this.undoStack.length===0) return;
+            const cmd = this.undoStack.pop();
+            cmd.undo?.();
+            this.redoStack.push(cmd);
+          },
+
+          redo(){
+            if(this.redoStack.length===0) return;
+            const cmd = this.redoStack.pop();
+            cmd.do?.();
+            this.undoStack.push(cmd);
+          }
+
+        }))
+      });
+    </script>
+
+  </body>
+</html>
