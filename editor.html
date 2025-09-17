@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Vi-inspired Editor Final</title>
+<title>Vi-inspired Editor Final (with id,text)</title>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 <style>
 body { font-family:sans-serif; margin:0; }
@@ -12,19 +12,27 @@ body { font-family:sans-serif; margin:0; }
 .line.selected { background:#d0ebff; }
 .line:empty::before { content:"\00a0"; }
 .line, .line-input {
-  white-space: pre;  /* 텍스트 자동 줄 바꿈 방지 */
-  overflow-x: auto;     /* 길면 가로 스크롤 가능 */
-  min-height: 2em;       /* 최소 높이 동일 */
-  line-height: 2em;      /* 텍스트 높이 동일 */
-  padding: 4px 8px;      /* 패딩 동일 */
-  font-size: 16px;       /* 글자 크기 동일 */
+  white-space: pre;
+  overflow-x: auto;
+  min-height: 2em;
+  line-height: 2em;
+  padding: 4px 8px;
+  font-size: 16px;
   box-sizing: border-box; 
 }
-input.line-input { width:100%; border:none; outline:none; padding:4px 8px; border-bottom:1px dashed #ddd; font-family:inherit; font-size:inherit; }
+input.line-input {
+  width:100%;
+  border:none;
+  outline:none;
+  padding:4px 8px;
+  border-bottom:1px dashed #ddd;
+  font-family:inherit;
+  font-size:inherit;
+}
 .toolbar {
-  position: sticky;      /* 스크롤 시 상단에 고정 */
-  top: 0;                /* 화면 최상단 */
-  z-index: 1000;         /* 다른 요소 위에 표시 */
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   background: #eee;
   padding: 6px;
   border-bottom: 1px solid #ccc;
@@ -45,8 +53,8 @@ input.line-input { width:100%; border:none; outline:none; padding:4px 8px; borde
       <button @click="manualCopy()">📄 복사</button>
       <button @click="paste()">📋 붙여넣기</button>
       <button @click="replace()">♻ 치환</button>
-  <button @click="selectAll()">전체 선택</button>
-  <button @click="deleteSelection()">선택 영역 삭제</button>
+      <button @click="selectAll()">전체 선택</button>
+      <button @click="deleteSelection()">선택 영역 삭제</button>
     </div>
   </template>
   <button @click="undo()" :disabled="undoStack.length===0">↩ undo</button>
@@ -58,11 +66,11 @@ input.line-input { width:100%; border:none; outline:none; padding:4px 8px; borde
   <!-- 에디터 모드 -->
   <template x-if="mode==='editor'">
     <div>
-      <template x-for="(line, i) in lines" :key="i">
+      <template x-for="(line, i) in lines" :key="line.id">
         <div class="line"
              :class="{selected: selection && i>=selection.start && i<=selection.end}"
              @click="toggleSelect(i)"
-             x-text="line">
+             x-text="line.text">
         </div>
       </template>
     </div>
@@ -71,14 +79,16 @@ input.line-input { width:100%; border:none; outline:none; padding:4px 8px; borde
   <!-- 텍스트 모드 -->
   <template x-if="mode==='text'">
     <div>
-      <template x-for="(line,i) in lines" :key="i">
-<input
-  class="line-input"
-  type="text"
-  x-model="lines[i]"
-  @keyup.enter.prevent="insertLine(i, $event)"
-  enterkeyhint="enter"
-/>
+      <template x-for="(line,i) in lines" :key="line.id">
+        <input
+          class="line-input"
+          type="text"
+          x-model="lines[i].text"
+          @keyup.enter.prevent="insertLine(i, $event)"
+@keyup.backspace="mergeWithPrev(i,$event)"
+          enterkeyhint="enter"
+        />
+
       </template>
     </div>
   </template>
@@ -88,22 +98,26 @@ input.line-input { width:100%; border:none; outline:none; padding:4px 8px; borde
 document.addEventListener("alpine:init",()=>{
 Alpine.data("editorApp",()=>({
 mode:"editor",
-lines:["첫 줄","둘째 줄","셋째 줄"],
+lines:[
+  {id:1,text:"첫 줄"},
+  {id:2,text:"둘째 줄"},
+  {id:3,text:"셋째 줄"}
+],
 selection:null,
 undoStack:[],
 redoStack:[],
+nextId:4,
+
+genId(){ return this.nextId++; },
 
 toggleMode(){ this.mode = this.mode==="editor" ? "text":"editor"; this.selection=null; },
 
 toggleSelect(i) {
   if (!this.selection) {
-    // 처음 클릭: start = end = i
     this.selection = { start: i, end: i };
-    this.lastClicked = i; // 최근 클릭 기록
+    this.lastClicked = i;
     return;
   }
-
-  // 최근 클릭한 쪽을 기준으로 범위 조정
   if (i >= this.lastClicked) {
     this.selection.start = this.lastClicked;
     this.selection.end = i;
@@ -111,8 +125,6 @@ toggleSelect(i) {
     this.selection.start = i;
     this.selection.end = this.lastClicked;
   }
-
-  // 최근 클릭 업데이트
   this.lastClicked = i;
 },
 
@@ -128,7 +140,7 @@ selectAll() {
 deleteSelection() {
   if(!this.selection) return;
   const { start, end } = this.selection;
-  const oldLines = this.lines.slice(start, end + 1);
+  const oldLines = this.lines.slice(start, end + 1).map(l=>({...l}));
 
   const cmd = {
     do: () => {
@@ -157,7 +169,7 @@ async writeClipboard(text,manual=false){
 
 manualCopy(){
   if(!this.selection) return;
-  const text = this.getSelectedLines().join('\n');
+  const text = this.getSelectedLines().map(l=>l.text).join('\n');
   this.writeClipboard(text,true);
   this.selection=null;
 },
@@ -165,11 +177,11 @@ manualCopy(){
 manualCut(){
   if(!this.selection) return;
   const {start,end}=this.selection;
-  const oldLines = this.getSelectedLines();
+  const oldLines = this.getSelectedLines().map(l=>({...l}));
   const cmd = {
     do:()=>{ this.lines.splice(start,end-start+1); this.selection=null; },
     undo:()=>{ this.lines.splice(start,0,...oldLines); },
-    manual:()=>this.writeClipboard(oldLines.join('\n'),true)
+    manual:()=>this.writeClipboard(oldLines.map(l=>l.text).join('\n'),true)
   };
   this.execute(cmd);
   cmd.manual();
@@ -179,7 +191,7 @@ async paste(){
   try{
     const text = await navigator.clipboard.readText();
     if(!text) return;
-    const linesToInsert = text.split('\n');
+    const linesToInsert = text.split('\n').map(t=>({id:this.genId(),text:t}));
     const index = this.selection ? this.selection.end : this.lines.length-1;
     const cmd = {
       do:()=>{ this.lines.splice(index+1,0,...linesToInsert); this.selection=null; },
@@ -195,8 +207,8 @@ async replace(){
   try{
     const text = await navigator.clipboard.readText();
     if(!text) return;
-    const newLines = text.split('\n');
-    const oldLines = this.lines.slice(start,end+1);
+    const newLines = text.split('\n').map(t=>({id:this.genId(),text:t}));
+    const oldLines = this.lines.slice(start,end+1).map(l=>({...l}));
     const cmd = {
       do:()=>{ this.lines.splice(start,end-start+1,...newLines); this.selection=null; },
       undo:()=>{ this.lines.splice(start,newLines.length,...oldLines); }
@@ -208,15 +220,18 @@ async replace(){
 insertLine(i, event) {
   const input = event.target;
   const cursorPos = input.selectionStart;
-  const value = input.value; // 최신 입력값
+  const value = input.value;
 
   const before = value.slice(0, cursorPos);
   const after = value.slice(cursorPos);
+  const oldLine = {...this.lines[i]};
+
   const cmd = {
     do: () => {
-      this.lines.splice(i, 1, before, after);
-
-      // DOM 렌더링 후 커서 이동
+      this.lines.splice(i, 1,
+        {id:this.genId(), text: before},
+        {id:this.genId(), text: after}
+      );
       setTimeout(() => {
         const inputs = document.querySelectorAll('input.line-input');
         const nextInput = inputs[i + 1];
@@ -227,11 +242,53 @@ insertLine(i, event) {
       }, 0);
     },
     undo: () => {
-      this.lines.splice(i, 2, value);
+      this.lines.splice(i, 2, oldLine);
       setTimeout(() => {
         const inputs = document.querySelectorAll('input.line-input');
         if (inputs[i]) inputs[i].focus();
       }, 0);
+    }
+  };
+
+  this.execute(cmd);
+},
+mergeWithPrev(i, event) {
+  const input = event.target;
+  const cursorPos = input.selectionStart;
+
+  if(cursorPos !== 0) return;
+  if(i === 0) return;
+event.preventDefault();
+  const prevLine = {...this.lines[i-1]};
+  const currLine = {...this.lines[i]};
+
+  const cmd = {
+    do: () => {
+      // 이전 줄과 현재 줄 합치기
+      const mergedText = prevLine.text + currLine.text;
+      this.lines.splice(i-1, 2, {id: this.genId(), text: mergedText});
+
+      // DOM 업데이트 후 focus 및 커서 위치
+      setTimeout(() => {
+        const inputs = document.querySelectorAll('input.line-input');
+        const newInput = inputs[i-1];
+        if(newInput) {
+          newInput.focus();
+          newInput.setSelectionRange(prevLine.text.length, prevLine.text.length);
+        }
+      }, 0);
+    },
+    undo: () => {
+      // 합치기 전 상태 복원
+      this.lines.splice(i-1, 1, prevLine, currLine);
+      setTimeout(() => {
+        const inputs = document.querySelectorAll('input.line-input');
+        const currInput = inputs[i];
+        if(currInput) {
+          currInput.focus();
+          currInput.setSelectionRange(0,0);
+        }
+      },0);
     }
   };
 
