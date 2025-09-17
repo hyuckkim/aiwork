@@ -5,14 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Vi-inspired Editor</title>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<link id="hljs-theme-link" rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/default.min.css">
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
 <style>
-body { font-family:sans-serif; margin:0; }
+body { font-family:sans-serif; margin:0; min-height: 100vh;}
 .toolbar { display:flex; gap:8px; padding:6px; background:#eee; border-bottom:1px solid #ccc; flex-wrap:wrap; }
 .line { padding:4px 8px; border-bottom:1px dashed #ddd; cursor:pointer; min-height:1.5em; }
 .line.selected { background:#d0ebff; }
 .line:empty::before { content:"\00a0"; }
 .line, .line-input {
-  white-space: pre;
   overflow-x: auto;
   min-height: 2em;
   line-height: 2em;
@@ -28,6 +29,11 @@ input.line-input {
   border-bottom:1px dashed #ddd;
   font-family:inherit;
   font-size:inherit;
+  white-space: pre;
+}
+.line-input {
+  background-color: transparent;
+  color: inherit;
 }
 .line.highlighted,
 .line-input.highlighted {
@@ -45,9 +51,48 @@ input.line-input {
   gap: 8px;
   flex-wrap: wrap;
 }
+.modal {
+  display: flex;
+  position: fixed;
+  background: rgba(0,0,0,0.5);
+  inset: 0;
+  align-items: center; justify-content: center; z-index: 2000;
+}
 </style>
 </head>
 <body x-data="editorApp">
+
+<!-- Highlight.js 설정 모달 -->
+<div id="highlightSettingsModal" class="modal"
+     x-show="showHighlightModal"
+     x-cloak>
+  <div style="background: white; padding: 20px; border-radius: 8px; width: 320px; max-width: 90%;">
+    <h2 style="margin-top:0;">Highlight.js 설정</h2>
+
+    <!-- 언어 선택 -->
+    <label for="hljsLanguage" style="display:block; margin-top:10px;">언어 선택</label>
+    <select id="hljsLanguage" x-model="selectedLanguage" style="width:100%; padding:6px;">
+      <template x-for="lang in availableLanguages" :key="lang">
+        <option :value="lang" x-text="lang"></option>
+      </template>
+    </select>
+
+    <!-- 테마 선택 -->
+    <label for="hljsTheme" style="display:block; margin-top:10px;">테마 선택</label>
+    <select id="hljsTheme" x-model="selectedTheme" style="width:100%; padding:6px;">
+      <template x-for="theme in availableThemes" :key="theme">
+        <option :value="theme" x-text="theme"></option>
+      </template>
+    </select>
+
+    <!-- 버튼 영역 -->
+    <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
+      <button @click="showHighlightModal=false">취소</button>
+      <button @click="applyHighlightSettings()">확인</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- 툴바 -->
 <div class="toolbar">
@@ -71,26 +116,26 @@ input.line-input {
   </template>
   <button @click="undo()" :disabled="undoStack.length===0">↩ undo</button>
   <button @click="redo()" :disabled="redoStack.length===0">↪ redo</button>
+  <button @click="showHighlightModal = true">🎨</button>
 </div>
 
 <!-- 본문 -->
 <div>
   <!-- 에디터 모드 -->
   <template x-if="mode==='editor'">
-    <div>
+    <div class="hljs">
       <template x-for="(line, i) in lines" :key="line.id">
-        <div class="line"
-             :class="{selected: selection && i>=selection.start && i<=selection.end}"
-             @click="toggleSelect(i)"
-             x-text="line.text">
-        </div>
+<div class="line"
+  :class="{selected: selection && i>=selection.start && i<=selection.end}"
+  @click="toggleSelect(i)" x-html="hljs.highlight(line.text, {language: selectedLanguage}).value">
+</div>
       </template>
     </div>
   </template>
 
   <!-- 텍스트 모드 -->
   <template x-if="mode==='text'">
-    <div>
+    <div class="hljs">
       <template x-for="(line,i) in lines" :key="line.id">
         <input
           class="line-input"
@@ -375,6 +420,109 @@ highlightSearch() {
     el.classList.add('highlighted');
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
+},
+
+showHighlightModal: false,
+availableLanguages: hljs.listLanguages(),
+availableThemes: [
+  "1c-light.min.css",
+  "a11y-dark.min.css",
+  "a11y-light.min.css",
+  "agate.min.css",
+  "an-old-hope.min.css",
+  "androidstudio.min.css",
+  "arduino-light.min.css",
+  "arta.min.css",
+  "ascetic.min.css",
+  "atom-one-dark.min.css",
+  "atom-one-dark-reasonable.min.css",
+  "atom-one-light.min.css",
+  "brown-paper.min.css",
+  "codepen-embed.min.css",
+  "color-brewer.min.css",
+  "cybertopia-cherry.min.css",
+  "cybertopia-dimmer.min.css",
+  "cybertopia-icecap.min.css",
+  "cybertopia-saturated.min.css",
+  "dark.min.css",
+  "default.min.css",
+  "devibeans.min.css",
+  "docco.min.css",
+  "far.min.css",
+  "felipec.min.css",
+  "foundation.min.css",
+  "github.min.css",
+  "github-dark.min.css",
+  "github-dark-dimmed.min.css",
+  "gml.min.css",
+  "googlecode.min.css",
+  "gradient-dark.min.css",
+  "gradient-light.min.css",
+  "grayscale.min.css",
+  "hybrid.min.css",
+  "idea.min.css",
+  "intellij-light.min.css",
+  "ir-black.min.css",
+  "isbl-editor-dark.min.css",
+  "isbl-editor-light.min.css",
+  "kimbie-dark.min.css",
+  "kimbie-light.min.css",
+  "lightfair.min.css",
+  "lioshi.min.css",
+  "magula.min.css",
+  "mono-blue.min.css",
+  "monokai.min.css",
+  "monokai-sublime.min.css",
+  "night-owl.min.css",
+  "nnfx-dark.min.css",
+  "nnfx-light.min.css",
+  "nord.min.css",
+  "obsidian.min.css",
+  "panda-syntax-dark.min.css",
+  "panda-syntax-light.min.css",
+  "paraiso-dark.min.css",
+  "paraiso-light.min.css",
+  "pojoaque.min.css",
+  "purebasic.min.css",
+  "qtcreator-dark.min.css",
+  "qtcreator-light.min.css",
+  "rainbow.min.css",
+  "rose-pine.min.css",
+  "rose-pine-dawn.min.css",
+  "rose-pine-moon.min.css",
+  "routeros.min.css",
+  "school-book.min.css",
+  "shades-of-purple.min.css",
+  "srcery.min.css",
+  "stackoverflow-dark.min.css",
+  "stackoverflow-light.min.css",
+  "sunburst.min.css",
+  "tokyo-night-dark.min.css",
+  "tokyo-night-light.min.css",
+  "tomorrow-night-blue.min.css",
+  "tomorrow-night-bright.min.css",
+  "vs.min.css",
+  "vs2015.min.css",
+  "xcode.min.css",
+  "xt256.min.css"
+],
+selectedLanguage: 'html',
+selectedTheme: 'default.min.css',
+
+applyHighlightSettings() {
+  // 테마 CSS 교체
+  const themeLinkId = 'hljs-theme-link';
+  let linkEl = document.getElementById(themeLinkId);
+  if (!linkEl) {
+    linkEl = document.createElement('link');
+    linkEl.id = themeLinkId;
+    linkEl.rel = 'stylesheet';
+    document.head.appendChild(linkEl);
+  }
+  linkEl.href = `https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/${this.selectedTheme}`;
+
+  // 모달 닫기
+  this.showHighlightModal = false;
 },
 
 }))
