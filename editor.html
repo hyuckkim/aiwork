@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Vi-inspired Editor Final (with id,text)</title>
+<title>Vi-inspired Editor</title>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 <style>
 body { font-family:sans-serif; margin:0; }
@@ -29,6 +29,11 @@ input.line-input {
   font-family:inherit;
   font-size:inherit;
 }
+.line.highlighted,
+.line-input.highlighted {
+  background-color: #ffe066; /* 밝은 노란색 강조 */
+  transition: background-color 0.3s ease;
+}
 .toolbar {
   position: sticky;
   top: 0;
@@ -46,6 +51,13 @@ input.line-input {
 
 <!-- 툴바 -->
 <div class="toolbar">
+<div style="display:flex; align-items:center; gap:4px; margin-left:16px;">
+  <input type="text" placeholder="검색…" x-model="searchQuery"
+@input="runSearch()" @keyup.enter="searchNext()" style="padding:4px; font-size:14px;" />
+  <button @click="searchPrev()">▲</button>
+  <button @click="searchNext()">▼</button>
+<span x-text="searchResults.length ? (currentResult + 1) + ' of ' + searchResults.length : '0 of 0'"></span>
+</div>
   <button @click="toggleMode()">모드: <span x-text="mode"></span></button>
   <template x-if="mode==='editor'">
     <div style="display:flex; gap:4px;">
@@ -307,7 +319,63 @@ redo(){
   const cmd = this.redoStack.pop();
   cmd.do?.();
   this.undoStack.push(cmd);
-}
+},
+
+searchQuery: '',
+searchResults: [],
+currentResult: -1,
+lastQuery: '',
+
+runSearch() {
+  if (!this.searchQuery) {
+    this.searchResults = [];
+    this.currentResult = -1;
+    this.lastQuery = '';
+    return;
+  }
+
+  // 검색어가 바뀌었을 때만 새로 계산
+  if (this.searchQuery !== this.lastQuery) {
+    this.searchResults = this.lines
+      .map((line, i) => line.text.includes(this.searchQuery) ? i : -1)
+      .filter(i => i >= 0);
+
+    this.currentResult = this.searchResults.length ? 0 : -1;
+    this.lastQuery = this.searchQuery;
+  }
+
+  this.highlightSearch();
+},
+
+searchNext() {
+  if (!this.searchResults.length) return;
+  this.currentResult = (this.currentResult + 1) % this.searchResults.length;
+  this.highlightSearch();
+},
+
+searchPrev() {
+  if (!this.searchResults.length) return;
+  this.currentResult = (this.currentResult - 1 + this.searchResults.length) % this.searchResults.length;
+  this.highlightSearch();
+},
+
+highlightSearch() {
+  // 이전 하이라이트 제거
+  document.querySelectorAll('.highlighted').forEach(el => {
+    el.classList.remove('highlighted');
+  });
+
+  if (this.currentResult === -1) return;
+
+  const index = this.searchResults[this.currentResult];
+  const elements = document.querySelectorAll('.line, .line-input');
+  const el = elements[index];
+
+  if (el) {
+    el.classList.add('highlighted');
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+},
 
 }))
 });
