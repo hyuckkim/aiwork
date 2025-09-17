@@ -73,7 +73,7 @@ input.line-input {
     <label for="hljsLanguage" style="display:block; margin-top:10px;">언어 선택</label>
     <select id="hljsLanguage" x-model="selectedLanguage" style="width:100%; padding:6px;">
       <template x-for="lang in availableLanguages" :key="lang">
-        <option :value="lang" x-text="lang"></option>
+        <option :value="lang" x-text="lang" :selected="lang===selectedLanguage"></option>
       </template>
     </select>
 
@@ -81,7 +81,7 @@ input.line-input {
     <label for="hljsTheme" style="display:block; margin-top:10px;">테마 선택</label>
     <select id="hljsTheme" x-model="selectedTheme" style="width:100%; padding:6px;">
       <template x-for="theme in availableThemes" :key="theme">
-        <option :value="theme" x-text="theme"></option>
+        <option :value="theme" x-text="theme" :selected="theme===selectedTheme"></option>
       </template>
     </select>
 
@@ -506,8 +506,8 @@ availableThemes: [
   "xcode.min.css",
   "xt256.min.css"
 ],
-selectedLanguage: 'html',
-selectedTheme: 'default.min.css',
+selectedLanguage: localStorage.getItem("hljsLanguage") ?? 'javascript',
+selectedTheme: localStorage.getItem("hljsTheme") ?? 'default.min.css',
 
 applyHighlightSettings() {
   // 테마 CSS 교체
@@ -521,8 +521,18 @@ applyHighlightSettings() {
   }
   linkEl.href = `https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/${this.selectedTheme}`;
 
+
+  // 언어 적용: highlight 호출 시 selectedLanguage 사용
+  // 예: hljs.highlight(line.text, { language: this.selectedLanguage }).value
+
   // 모달 닫기
+  localStorage.setItem("hljsLanguage", this.selectedLanguage);
+  localStorage.setItem("hljsTheme", this.selectedTheme);
   this.showHighlightModal = false;
+},
+
+init() {
+  this.applyHighlightSettings();
 },
 
 }))
