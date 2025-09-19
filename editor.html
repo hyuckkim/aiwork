@@ -178,11 +178,21 @@ genId(){ return this.nextId++; },
 toggleMode(){ this.mode = this.mode==="editor" ? "text":"editor"; this.selection=null; },
 
 toggleSelect(i) {
+  // 선택이 없으면 새로 선택
   if (!this.selection) {
     this.selection = { start: i, end: i };
     this.lastClicked = i;
     return;
   }
+
+  // 선택 범위가 한 줄이고, 같은 줄을 다시 클릭하면 취소
+  if (this.selection.start === this.selection.end && this.selection.start === i) {
+    this.selection = null;
+    this.lastClicked = null;
+    return;
+  }
+
+  // 기존 로직: lastClicked 기준으로 범위 조정
   if (i >= this.lastClicked) {
     this.selection.start = this.lastClicked;
     this.selection.end = i;
@@ -190,6 +200,7 @@ toggleSelect(i) {
     this.selection.start = i;
     this.selection.end = this.lastClicked;
   }
+
   this.lastClicked = i;
 },
 
@@ -384,6 +395,10 @@ runSearch() {
     this.searchResults = [];
     this.currentResult = -1;
     this.lastQuery = '';
+  // 이전 하이라이트 제거
+  document.querySelectorAll('.highlighted').forEach(el => {
+    el.classList.remove('highlighted');
+  });
     return;
   }
 
