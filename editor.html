@@ -24,6 +24,18 @@ body { font-family:sans-serif; margin:0; min-height: 100vh;}
   font-size: 16px;
   box-sizing: border-box; 
 }
+.file-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.file-tabs button {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+}
 input.line-input {
   width:100%;
   border:none;
@@ -106,7 +118,18 @@ input.line-input {
 
 <!-- 툴바 -->
 <div class="toolbar">
-<div style="display:flex; align-items:center; gap:4px; margin-left:16px;">
+<div class="file-tabs" x-show="fileVisible" style="display:flex; gap:4px; padding:4px;">
+  <template x-for="(file, i) in files" :key="i">
+    <button
+      @click="currentFileIndex = i"
+      :class="{'bg-blue-300': currentFileIndex===i}"
+    >
+      File <span x-text="i+1"></span>
+    </button>
+  </template>
+  <button @click="files.push({lines:[{id:1,text:''}], selection:null, undoStack:[], redoStack:[]}); currentFileIndex = files.length-1">+</button>
+</div>
+<div x-show="searchVisible" style="display:flex; align-items:center; gap:4px; margin-left:16px;">
   <input type="text" placeholder="검색…" x-model="searchQuery"
 @input="runSearch()" @keyup.enter="searchNext()" style="padding:4px; font-size:14px;" />
   <button @click="searchPrev()">▲</button>
@@ -127,6 +150,8 @@ input.line-input {
   <button @click="undo()" :disabled="undoStack.length===0">↩ undo</button>
   <button @click="redo()" :disabled="redoStack.length===0">↪ redo</button>
   <button @click="showHighlightModal = true">🎨</button>
+  <button @click="fileVisible = !fileVisible">📁</button>
+  <button @click="searchVisible = !searchVisible">🔍</button>
 </div>
 
 <!-- 본문 -->
@@ -171,11 +196,41 @@ input.line-input {
 document.addEventListener("alpine:init",()=>{
 Alpine.data("editorApp",()=>({
 mode:"editor",
-lines:[
-  {id:1,text:"첫 줄"},
-  {id:2,text:"둘째 줄"},
-  {id:3,text:"셋째 줄"}
+fileVisible: false,
+searchVisible: false,
+files: [
+  {
+    lines: [{id:1,text:"첫 줄"}, {id:2,text:"둘째 줄"}],
+    selection: null,
+    undoStack: [],
+    redoStack: []
+  },
+  {
+    lines: [{id:1,text:"A"}, {id:2,text:"B"}],
+    selection: null,
+    undoStack: [],
+    redoStack: []
+  }
 ],
+currentFileIndex: 0,
+get lines() {
+  return this.files[this.currentFileIndex].lines;
+},
+set lines(newLines) {
+  this.files[this.currentFileIndex].lines = newLines;
+},
+get undoStack() {
+  return this.files[this.currentFileIndex].undoStack;
+},
+set undoStack(newStack) {
+  this.files[this.currentFileIndex].undoStack = newStack;
+},
+get redoStack() {
+  return this.files[this.currentFileIndex].redoStack;
+},
+set redoStack(newStack) {
+  this.files[this.currentFileIndex].redoStack = newStack;
+},
 selection:null,
 undoStack:[],
 redoStack:[],
@@ -185,6 +240,12 @@ genId(){ return this.nextId++; },
 
 toggleMode(){ this.mode = this.mode==="editor" ? "text":"editor"; this.selection=null; },
 
+switchFile(index) {
+  if(index >=0 && index < this.files.length){
+    this.currentFileIndex = index;
+    this.selection = this.lines.length ? {start:0,end:0} : null;
+  }
+},
 toggleSelect(i) {
   // 선택이 없으면 새로 선택
   if (!this.selection) {
