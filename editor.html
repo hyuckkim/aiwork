@@ -26,6 +26,7 @@ body { font-family:sans-serif; margin:0; min-height: 100vh;}
 }
 .file-tabs {
   display: flex;
+width: 100%;
   gap: 4px;
   padding: 4px;
   overflow-x: auto;
@@ -122,7 +123,7 @@ input.line-input {
   <template x-for="(file, i) in files" :key="i">
     <button
       @click="currentFileIndex = i"
-      :class="{'bg-blue-300': currentFileIndex===i}"
+      :style="currentFileIndex === i ? 'background-color:#7dd3fc;' : ''"
     >
       File <span x-text="i+1"></span>
     </button>
