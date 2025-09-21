@@ -177,6 +177,12 @@ input.line-input {
           class="line-input"
           type="text"
           x-model="lines[i].text"
+    @input="
+      const before = $event.target.defaultValue || '';
+      const after = $event.target.value;
+      recordEdit(i, before, after);
+      $event.target.defaultValue = after;
+    "
           @keyup.enter.prevent="insertLine(i, $event)"
 @keyup.backspace="mergeWithPrev(i,$event)"
           enterkeyhint="enter"
@@ -243,6 +249,8 @@ set scroll(val) {
 selection:null,
 undoStack:[],
 redoStack:[],
+  pendingEdit: null,
+  flushTimer: null,
 nextId:4,
 
 genId(){ return this.nextId++; },
@@ -313,6 +321,7 @@ deleteSelection() {
 },
 
 execute(cmd){
+    this.flushPending();
   cmd.do();
   this.undoStack.push(cmd);
   this.redoStack=[];
@@ -453,6 +462,7 @@ event.preventDefault();
 },
 
 undo(){
+    this.flushPending();
   if(this.undoStack.length===0) return;
   const cmd = this.undoStack.pop();
   cmd.undo?.();
@@ -521,6 +531,39 @@ highlightSearch() {
   if (el) {
     el.classList.add('highlighted');
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+},
+recordEdit(line, before, after) {
+  if (this.pendingEdit && this.pendingEdit.line === line) {
+    // 같은 라인 연속 수정 → after 업데이트
+    this.pendingEdit.after = after
+  } else {
+    // 다른 라인 수정이면 기존 pending flush
+    this.flushPending()
+    this.pendingEdit = { line, before, after }
+  }
+
+  // 1초 동안 추가 입력 합치기
+  if (this.flushTimer) {
+    clearTimeout(this.flushTimer)
+  }
+  this.flushTimer = setTimeout(() => this.flushPending(), 1000)
+},
+
+flushPending() {
+ if (this.pendingEdit) {
+    const { line, before, after } = this.pendingEdit
+    this.pendingEdit = null;
+alert(line + before + after);
+    const cmd = {
+      do: () => this.files[this.currentFileIndex].lines[line] = after,
+      undo: () => this.files[this.currentFileIndex].lines[line] = before
+    }
+    this.execute(cmd)   // <-- undoStack에 push + redoStack 초기화 포함
+  }
+  if (this.flushTimer) {
+    clearTimeout(this.flushTimer)
+    this.flushTimer = null
   }
 },
 
