@@ -10,25 +10,30 @@
 <link id="hljs-theme-link" rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/default.min.css">
 <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
 <style>
-body { font-family:sans-serif; margin:0; min-height: 100vh;}
-.toolbar { display:flex; gap:8px; padding:6px; background:#eee; border-bottom:1px solid #ccc; flex-wrap:wrap; }
-.line { padding:4px 8px; border-bottom:1px dashed #ddd; cursor:pointer; min-height:1.5em; }
-.line.selected { background:#d0ebff; }
-.line:empty::before { content:"\00a0"; }
-.line, .line-input {
-  overflow-wrap: normal;
-  overflow-x: auto;
-  min-height: 2em;
-  line-height: 2em;
-  padding: 4px 8px;
-  font-size: 16px;
-  box-sizing: border-box; 
+/* 공통 */
+body {
+  font-family: sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
+
+/* 툴바 */
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px;
+  background: #eee;
+  border-bottom: 1px solid #ccc;
+}
+
 .file-tabs {
   display: flex;
-width: 100%;
   gap: 4px;
-  padding: 4px;
   overflow-x: auto;
   white-space: nowrap;
 }
@@ -37,49 +42,62 @@ width: 100%;
   flex: 0 0 auto;
   padding: 4px 8px;
 }
-input.line-input {
-  width:100%;
-  border:none;
-  outline:none;
-  padding:4px 8px;
-  border-bottom:1px dashed #ddd;
-  font-family:inherit;
-  font-size:inherit;
-  white-space: pre;
+
+/* 검색 영역 */
+.toolbar input[type="text"] {
+  padding: 4px;
+  font-size: 14px;
 }
-.line-input {
-  background-color: transparent;
-  color: inherit;
+
+/* 에디터 줄 */
+.line, .line-input {
+  font-size: 16px;
+  line-height: 2em;
+  min-height: 2em;
+  padding: 4px 8px;
+  box-sizing: border-box;
+  overflow-x: auto;
+  white-space: pre; /* hljs 덮어쓰는 것 방지 */
+  font-family: inherit;
 }
+
+.line:empty::before {
+  content: "\00a0"; /* 빈 줄 표시 */
+}
+
+.line.selected {
+  background: #d0ebff;
+}
+
 .line.highlighted,
 .line-input.highlighted {
-  background-color: #ffe066; /* 밝은 노란색 강조 */
+  background-color: #ffe066; /* 강조 색 */
   transition: background-color 0.3s ease;
 }
-.toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  background: #eee;
-  padding: 6px;
-  border-bottom: 1px solid #ccc;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+
+/* 인풋 전용 */
+input.line-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
 }
+
+/* 모달 */
 .modal {
   display: flex;
   position: fixed;
-  background: rgba(0,0,0,0.5);
   inset: 0;
-  align-items: center; justify-content: center; z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  z-index: 2000;
 }
-.line {
-  white-space: pre !important; /* hljs가 덮어쓰는 것 방지 */
-  overflow-x: auto;
-}
+
+/* Highlight.js */
 .line span.hljs {
-  white-space: inherit; /* 부모 줄바꿈 금지 상속 */
+  white-space: inherit; /* 부모 상속 */
 }
 </style>
 </head>
