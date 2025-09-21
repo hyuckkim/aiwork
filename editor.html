@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link rel="manifest" href="/manifest.json" />
+<link rel="manifest" href="/aiwork/manifest.json" />
 <meta name="theme-color" content="#000000" />
 <title>Vi-inspired Editor</title>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
@@ -189,7 +189,7 @@ input.line-input {
 
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('/aiwork/sw.js', { scope: '/aiwork/editor.html' })
       .then(() => console.log('Service Worker Registered'));
   }
 </script>
