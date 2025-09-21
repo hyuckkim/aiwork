@@ -9,6 +9,8 @@
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 <link id="hljs-theme-link" rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/default.min.css">
 <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
 <style>
 body { font-family:sans-serif; margin:0; min-height: 100vh;}
 .toolbar { display:flex; gap:8px; padding:6px; background:#eee; border-bottom:1px solid #ccc; flex-wrap:wrap; }
@@ -128,7 +130,7 @@ input.line-input {
       File <span x-text="i+1"></span>
     </button>
   </template>
-  <button @click="files.push({lines:[{id:1,text:''}], selection:null, undoStack:[], redoStack:[]}); currentFileIndex = files.length-1">+</button>
+  <button @click="files.push({lines:[{id:1,text:''}], selection:null, undoStack:[], redoStack:[], scroll: 0, nextId: 2}); currentFileIndex = files.length-1">+</button>
 </div>
 <div x-show="searchVisible" style="display:flex; align-items:center; gap:4px; margin-left:16px;">
   <input type="text" placeholder="검색…" x-model="searchQuery"
@@ -222,14 +224,16 @@ files: [
     selection: null,
     undoStack: [],
     redoStack: [],
-    scroll: 0
+    scroll: 0,
+    nextId: 3
   },
   {
     lines: [{id:1,text:"A"}, {id:2,text:"B"}],
     selection: null,
     undoStack: [],
     redoStack: [],
-    scroll: 0
+    scroll: 0,
+    nextId: 3
   }
 ],
 currentFileIndex: 0,
@@ -258,11 +262,12 @@ set scroll(val) {
   this.files[this.currentFileIndex].scroll = val;
 },
 selection:null,
-undoStack:[],
-redoStack:[],
-nextId:4,
-
-genId(){ return this.nextId++; },
+get currentFile() {
+  return this.files[this.currentFileIndex];
+},
+genId() {
+  return this.currentFile.nextId++;
+},
 
 toggleMode(){ this.mode = this.mode==="editor" ? "text":"editor"; this.selection=null; },
 
@@ -333,6 +338,7 @@ execute(cmd){
   cmd.do();
   this.undoStack.push(cmd);
   this.redoStack=[];
+this.saveFilesToStorage();
 },
 
 async writeClipboard(text,manual=false){
@@ -391,7 +397,7 @@ async paste() {
     this.execute(cmd);
   } catch (e) {
     console.warn("Clipboard read failed", e);
-  }
+ }
 },
 
 async replace() {
@@ -528,6 +534,7 @@ undo(){
   const cmd = this.undoStack.pop();
   cmd.undo?.();
   this.redoStack.push(cmd);
+this.saveFilesToStorage();
 },
 
 redo(){
@@ -535,6 +542,22 @@ redo(){
   const cmd = this.redoStack.pop();
   cmd.do?.();
   this.undoStack.push(cmd);
+this.saveFilesToStorage();
+},
+  saveFilesToStorage() {
+    localStorage.setItem("editorFiles", JSON.stringify(this.files));
+  },
+
+loadFilesFromStorage() {
+  const saved = localStorage.getItem("editorFiles");
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      this.files.splice(0, this.files.length, ...parsed);
+    } catch (e) {
+      console.error("Failed to parse editorFiles", e);
+    }
+  }
 },
 
 searchQuery: '',
@@ -706,6 +729,8 @@ applyHighlightSettings() {
 
 init() {
   this.applyHighlightSettings();
+    this.loadFilesFromStorage();
+console.log(this.files);
 },
 
 }))
