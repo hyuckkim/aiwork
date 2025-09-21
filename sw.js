@@ -1,4 +1,4 @@
-const CACHE_NAME = "editor-cache-v1";
+const CACHE_NAME = "editor-cache-v2";
 const OFFLINE_FALLBACK = "/aiwork/editor.html";
 
 self.addEventListener("install", (event) => {
