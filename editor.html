@@ -177,6 +177,8 @@ input.line-input {
           class="line-input"
           type="text"
           x-model="lines[i].text"
+  @focus="lines[i]._oldText = lines[i].text"
+  @blur="recordEdit(i)"
           @keyup.enter.prevent="insertLine(i, $event)"
 @keyup.backspace="mergeWithPrev(i,$event)"
           enterkeyhint="enter"
@@ -194,6 +196,21 @@ input.line-input {
   }
 </script>
 <script>
+// 스냅샷: 현재 라인을 깊게 복사하고, 불변으로 보관
+function snapshotLines(lines) {
+  const snap = lines.map(l => ({ id: l.id, text: l.text }));
+  // 개발 중 참조 누수 잡으려면 주석 해제해서 동결해도 좋음
+  // snap.forEach(o => Object.freeze(o));
+  // Object.freeze(snap);
+  return snap;
+}
+
+// 적용: 스냅샷을 기반으로 "항상 새 객체"를 만들어 DOM에 꽂기
+function materialize(snapshot) {
+  return snapshot.map(l => ({ id: l.id, text: l.text }));
+}
+
+
 document.addEventListener("alpine:init",()=>{
 Alpine.data("editorApp",()=>({
 mode:"editor",
@@ -295,9 +312,9 @@ selectAll() {
 },
 
 deleteSelection() {
-  if(!this.selection) return;
+  if (!this.selection) return;
   const { start, end } = this.selection;
-  const oldLines = this.lines.slice(start, end + 1).map(l=>({...l}));
+  const oldSnap = snapshotLines(this.lines.slice(start, end + 1));
 
   const cmd = {
     do: () => {
@@ -305,7 +322,7 @@ deleteSelection() {
       this.selection = null;
     },
     undo: () => {
-      this.lines.splice(start, 0, ...oldLines);
+      this.lines.splice(start, 0, ...materialize(oldSnap));
     }
   };
 
@@ -331,64 +348,99 @@ manualCopy(){
   this.selection=null;
 },
 
-manualCut(){
-  if(!this.selection) return;
-  const {start,end}=this.selection;
-  const oldLines = this.getSelectedLines().map(l=>({...l}));
+manualCut() {
+  if (!this.selection) return;
+  const { start, end } = this.selection;
+  const oldSnap = snapshotLines(this.lines.slice(start, end + 1));
+
   const cmd = {
-    do:()=>{ this.lines.splice(start,end-start+1); this.selection=null; },
-    undo:()=>{ this.lines.splice(start,0,...oldLines); },
-    manual:()=>this.writeClipboard(oldLines.map(l=>l.text).join('\n'),true)
+    do: () => {
+      this.lines.splice(start, end - start + 1);
+      this.selection = null;
+    },
+    undo: () => {
+      this.lines.splice(start, 0, ...materialize(oldSnap));
+    },
+    manual: () => this.writeClipboard(oldSnap.map(l => l.text).join('\n'), true)
   };
+
   this.execute(cmd);
   cmd.manual();
 },
 
-async paste(){
-  try{
+async paste() {
+  try {
     const text = await navigator.clipboard.readText();
-    if(!text) return;
-    const linesToInsert = text.split('\n').map(t=>({id:this.genId(),text:t}));
-    const index = this.selection ? this.selection.end : this.lines.length-1;
+    if (!text) return;
+
+    const toInsertSnap = snapshotLines(
+      text.split('\n').map(t => ({ id: this.genId(), text: t }))
+    );
+    const index = this.selection ? this.selection.end : this.lines.length - 1;
+
     const cmd = {
-      do:()=>{ this.lines.splice(index+1,0,...linesToInsert); this.selection=null; },
-      undo:()=>{ this.lines.splice(index+1,linesToInsert.length); }
+      do: () => {
+        this.lines.splice(index + 1, 0, ...materialize(toInsertSnap));
+        this.selection = null;
+      },
+      undo: () => {
+        this.lines.splice(index + 1, toInsertSnap.length);
+      }
     };
+
     this.execute(cmd);
-  }catch(e){ console.warn("Clipboard read failed",e); }
+  } catch (e) {
+    console.warn("Clipboard read failed", e);
+  }
 },
 
-async replace(){
-  if(!this.selection) return;
-  const {start,end}=this.selection;
-  try{
+async replace() {
+  if (!this.selection) return;
+  const { start, end } = this.selection;
+
+  try {
     const text = await navigator.clipboard.readText();
-    if(!text) return;
-    const newLines = text.split('\n').map(t=>({id:this.genId(),text:t}));
-    const oldLines = this.lines.slice(start,end+1).map(l=>({...l}));
+    if (!text) return;
+
+    const newSnap = snapshotLines(
+      text.split('\n').map(t => ({ id: this.genId(), text: t }))
+    );
+    const oldSnap = snapshotLines(this.lines.slice(start, end + 1));
+
     const cmd = {
-      do:()=>{ this.lines.splice(start,end-start+1,...newLines); this.selection=null; },
-      undo:()=>{ this.lines.splice(start,newLines.length,...oldLines); }
+      do: () => {
+        this.lines.splice(start, end - start + 1, ...materialize(newSnap));
+        this.selection = null;
+      },
+      undo: () => {
+        this.lines.splice(start, newSnap.length, ...materialize(oldSnap));
+      }
     };
+
     this.execute(cmd);
-  }catch(e){ console.warn("Clipboard read failed",e); }
+  } catch (e) {
+    console.warn("Clipboard read failed", e);
+  }
 },
 
 insertLine(i, event) {
+  this.recordEdit(i);
   const input = event.target;
   const cursorPos = input.selectionStart;
   const value = input.value;
 
   const before = value.slice(0, cursorPos);
   const after = value.slice(cursorPos);
-  const oldLine = {...this.lines[i]};
+
+  const oldSnap = snapshotLines([this.lines[i]]);
+  const newSnap = snapshotLines([
+    { id: this.genId(), text: before },
+    { id: this.genId(), text: after }
+  ]);
 
   const cmd = {
     do: () => {
-      this.lines.splice(i, 1,
-        {id:this.genId(), text: before},
-        {id:this.genId(), text: after}
-      );
+      this.lines.splice(i, 1, ...materialize(newSnap));
       setTimeout(() => {
         const inputs = document.querySelectorAll('input.line-input');
         const nextInput = inputs[i + 1];
@@ -399,7 +451,7 @@ insertLine(i, event) {
       }, 0);
     },
     undo: () => {
-      this.lines.splice(i, 2, oldLine);
+      this.lines.splice(i, 2, ...materialize(oldSnap));
       setTimeout(() => {
         const inputs = document.querySelectorAll('input.line-input');
         if (inputs[i]) inputs[i].focus();
@@ -410,42 +462,61 @@ insertLine(i, event) {
   this.execute(cmd);
 },
 mergeWithPrev(i, event) {
+  this.recordEdit(i);
   const input = event.target;
   const cursorPos = input.selectionStart;
 
-  if(cursorPos !== 0) return;
-  if(i === 0) return;
-event.preventDefault();
-  const prevLine = {...this.lines[i-1]};
-  const currLine = {...this.lines[i]};
+  if (cursorPos !== 0) return;
+  if (i === 0) return;
+  event.preventDefault();
+
+  const prevSnap = snapshotLines([this.lines[i - 1]]);
+  const currSnap = snapshotLines([this.lines[i]]);
+  const mergedSnap = snapshotLines([
+    { id: this.genId(), text: prevSnap[0].text + currSnap[0].text }
+  ]);
 
   const cmd = {
     do: () => {
-      // 이전 줄과 현재 줄 합치기
-      const mergedText = prevLine.text + currLine.text;
-      this.lines.splice(i-1, 2, {id: this.genId(), text: mergedText});
-
-      // DOM 업데이트 후 focus 및 커서 위치
+      this.lines.splice(i - 1, 2, ...materialize(mergedSnap));
       setTimeout(() => {
         const inputs = document.querySelectorAll('input.line-input');
-        const newInput = inputs[i-1];
-        if(newInput) {
+        const newInput = inputs[i - 1];
+        if (newInput) {
           newInput.focus();
-          newInput.setSelectionRange(prevLine.text.length, prevLine.text.length);
+          newInput.setSelectionRange(prevSnap[0].text.length, prevSnap[0].text.length);
         }
       }, 0);
     },
     undo: () => {
-      // 합치기 전 상태 복원
-      this.lines.splice(i-1, 1, prevLine, currLine);
+      this.lines.splice(i - 1, 1, ...materialize(prevSnap), ...materialize(currSnap));
       setTimeout(() => {
         const inputs = document.querySelectorAll('input.line-input');
         const currInput = inputs[i];
-        if(currInput) {
+        if (currInput) {
           currInput.focus();
-          currInput.setSelectionRange(0,0);
+          currInput.setSelectionRange(0, 0);
         }
-      },0);
+      }, 0);
+    }
+  };
+
+  this.execute(cmd);
+},
+recordEdit(i) {
+  const oldText = this.lines[i]._oldText;
+  const newText = this.lines[i].text;
+  if (oldText === newText) return;
+
+  const oldSnap = { id: this.lines[i].id, text: oldText };
+  const newSnap = { id: this.lines[i].id, text: newText };
+
+  const cmd = {
+    do: () => {
+      this.lines.splice(i, 1, { id: newSnap.id, text: newSnap.text });
+    },
+    undo: () => {
+      this.lines.splice(i, 1, { id: oldSnap.id, text: oldSnap.text });
     }
   };
 
