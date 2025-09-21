@@ -62,10 +62,10 @@ body {
   overflow-x: auto;
   white-space: pre;          /* hljs 덮어쓰기 방지 */
   font-family: inherit;
+  cursor: pointer;
 
   /* 밑줄 */
   border-bottom: 1px dashed #ddd;
-  cursor: pointer;
 }
 
 .line:empty::before {
@@ -86,7 +86,8 @@ body {
 /* 인풋 전용 */
 input.line-input {
   width: 100%;
-  border: none;         /* outline 제거 */
+  border: none;                     /* 상단/좌우 border 제거 */
+  border-bottom: 1px dashed #ddd;   /* 밑줄 유지 */
   outline: none;
   background: transparent;
   color: inherit;
