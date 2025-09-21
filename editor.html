@@ -31,19 +31,22 @@ body {
   border-bottom: 1px solid #ccc;
 }
 
+/* 파일 탭 */
 .file-tabs {
   display: flex;
+  width: 100%;       /* 화면 전체 너비 사용 */
   gap: 4px;
+  padding: 4px;
   overflow-x: auto;
   white-space: nowrap;
 }
 
 .file-tabs button {
-  flex: 0 0 auto;
+  flex: 0 0 auto;    /* 버튼 크기 유지 */
   padding: 4px 8px;
 }
 
-/* 검색 영역 */
+/* 검색 입력 */
 .toolbar input[type="text"] {
   padding: 4px;
   font-size: 14px;
@@ -57,31 +60,37 @@ body {
   padding: 4px 8px;
   box-sizing: border-box;
   overflow-x: auto;
-  white-space: pre; /* hljs 덮어쓰는 것 방지 */
+  white-space: pre;          /* hljs 덮어쓰기 방지 */
   font-family: inherit;
+
+  /* 밑줄 */
+  border-bottom: 1px dashed #ddd;
+  cursor: pointer;
 }
 
 .line:empty::before {
   content: "\00a0"; /* 빈 줄 표시 */
 }
 
+/* 선택/강조 */
 .line.selected {
   background: #d0ebff;
 }
 
 .line.highlighted,
 .line-input.highlighted {
-  background-color: #ffe066; /* 강조 색 */
+  background-color: #ffe066; /* 밝은 노란색 강조 */
   transition: background-color 0.3s ease;
 }
 
 /* 인풋 전용 */
 input.line-input {
   width: 100%;
-  border: none;
+  border: none;         /* outline 제거 */
   outline: none;
   background: transparent;
   color: inherit;
+  cursor: text;
 }
 
 /* 모달 */
