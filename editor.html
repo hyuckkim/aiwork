@@ -739,7 +739,11 @@ function EditorApp() {
       this.saveFilesToStorage();
     },
     saveFilesToStorage() {
-      localStorage.setItem("editorFiles", JSON.stringify(this.files));
+      localStorage.setItem("editorFiles", JSON.stringify(this.files
+        .map(v => v.lines.map( 
+          f => f.text
+        ))
+      ));
     },
 
     loadFilesFromStorage() {
@@ -747,8 +751,15 @@ function EditorApp() {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          this.files.splice(0, this.files.length, ...parsed);
-          console.log('[EDITOR] data restored: ', Alpine.raw(this.files));
+          if (typeof parsed[0][0] === 'string') {
+            const builded = parsed.map(v => generateFile(...v));
+            this.files.splice(0, this.files.length, ...builded);
+            console.log('[EDITOR] data restored: ', parsed);
+          }
+          else {
+            this.files.splice(0, this.files.length, ...parsed);
+            console.log('[EDITOR] data restored: ', parsed);
+          }
         } catch (e) {
           console.log("[EDITOR] failed to parse data, use default data instead:", e);
         }
