@@ -167,7 +167,7 @@ input.line-input {
         @click="files.push({lines:[{id:1,text:''}], selection:null, undoStack:[], redoStack:[], scroll: 0, nextId: 2}); currentFileIndex = files.length-1">+</button>
     </div>
     <div x-show="searchVisible" style="display:flex; align-items:center; gap:4px; margin-left:16px;">
-      <input type="text" placeholder="검색…" x-model="searchQuery" @input="runSearch()" @keyup.enter="searchNext()"
+      <input type="text" placeholder="검색…" x-model="searchQuery" @input="runSearch(lines)" @keyup.enter="searchNext()"
         style="padding:4px; font-size:14px;" />
       <button @click="searchPrev()">▲</button>
       <button @click="searchNext()">▼</button>
@@ -237,8 +237,183 @@ function snapshotLines(lines) {
 function materialize(snapshot) {
   return snapshot.map(l => ({ id: l.id, text: l.text }));
 }
+
+function SearchModule() {
+  return {
+    searchQuery: '',
+    searchResults: [],
+    currentResult: -1,
+    lastQuery: '',
+    runSearch(lines) {
+      if (!this.searchQuery) {
+        this.searchResults = [];
+        this.currentResult = -1;
+        this.lastQuery = '';
+        // 이전 하이라이트 제거
+        document.querySelectorAll('.highlighted').forEach(el => {
+          el.classList.remove('highlighted');
+        });
+        return;
+      }
+
+      // 검색어가 바뀌었을 때만 새로 계산
+      if (this.searchQuery !== this.lastQuery) {
+        this.searchResults = lines
+          .map((line, i) => line.text.includes(this.searchQuery) ? i : -1)
+          .filter(i => i >= 0);
+
+        this.currentResult = this.searchResults.length ? 0 : -1;
+        this.lastQuery = this.searchQuery;
+      }
+    },
+
+    searchNext() {
+      if (!this.searchResults.length) return;
+      this.currentResult = (this.currentResult + 1) % this.searchResults.length;
+      this.highlightSearch();
+    },
+
+    searchPrev() {
+      if (!this.searchResults.length) return;
+      this.currentResult = (this.currentResult - 1 + this.searchResults.length) % this.searchResults.length;
+      this.highlightSearch();
+    },
+
+    highlightSearch() {
+      // 이전 하이라이트 제거
+      document.querySelectorAll('.highlighted').forEach(el => {
+        el.classList.remove('highlighted');
+      });
+
+      if (this.currentResult === -1) return;
+
+      const index = this.searchResults[this.currentResult];
+      const elements = document.querySelectorAll('.line, .line-input');
+      const el = elements[index];
+
+      if (el) {
+        el.classList.add('highlighted');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    },
+  }
+}
+function HighlightModule() {
+  return {
+    showHighlightModal: false,
+    availableLanguages: hljs.listLanguages(),
+    availableThemes: [
+      "1c-light.min.css",
+      "a11y-dark.min.css",
+      "a11y-light.min.css",
+      "agate.min.css",
+      "an-old-hope.min.css",
+      "androidstudio.min.css",
+      "arduino-light.min.css",
+      "arta.min.css",
+      "ascetic.min.css",
+      "atom-one-dark.min.css",
+      "atom-one-dark-reasonable.min.css",
+      "atom-one-light.min.css",
+      "brown-paper.min.css",
+      "codepen-embed.min.css",
+      "color-brewer.min.css",
+      "cybertopia-cherry.min.css",
+      "cybertopia-dimmer.min.css",
+      "cybertopia-icecap.min.css",
+      "cybertopia-saturated.min.css",
+      "dark.min.css",
+      "default.min.css",
+      "devibeans.min.css",
+      "docco.min.css",
+      "far.min.css",
+      "felipec.min.css",
+      "foundation.min.css",
+      "github.min.css",
+      "github-dark.min.css",
+      "github-dark-dimmed.min.css",
+      "gml.min.css",
+      "googlecode.min.css",
+      "gradient-dark.min.css",
+      "gradient-light.min.css",
+      "grayscale.min.css",
+      "hybrid.min.css",
+      "idea.min.css",
+      "intellij-light.min.css",
+      "ir-black.min.css",
+      "isbl-editor-dark.min.css",
+      "isbl-editor-light.min.css",
+      "kimbie-dark.min.css",
+      "kimbie-light.min.css",
+      "lightfair.min.css",
+      "lioshi.min.css",
+      "magula.min.css",
+      "mono-blue.min.css",
+      "monokai.min.css",
+      "monokai-sublime.min.css",
+      "night-owl.min.css",
+      "nnfx-dark.min.css",
+      "nnfx-light.min.css",
+      "nord.min.css",
+      "obsidian.min.css",
+      "panda-syntax-dark.min.css",
+      "panda-syntax-light.min.css",
+      "paraiso-dark.min.css",
+      "paraiso-light.min.css",
+      "pojoaque.min.css",
+      "purebasic.min.css",
+      "qtcreator-dark.min.css",
+      "qtcreator-light.min.css",
+      "rainbow.min.css",
+      "rose-pine.min.css",
+      "rose-pine-dawn.min.css",
+      "rose-pine-moon.min.css",
+      "routeros.min.css",
+      "school-book.min.css",
+      "shades-of-purple.min.css",
+      "srcery.min.css",
+      "stackoverflow-dark.min.css",
+      "stackoverflow-light.min.css",
+      "sunburst.min.css",
+      "tokyo-night-dark.min.css",
+      "tokyo-night-light.min.css",
+      "tomorrow-night-blue.min.css",
+      "tomorrow-night-bright.min.css",
+      "vs.min.css",
+      "vs2015.min.css",
+      "xcode.min.css",
+      "xt256.min.css"
+    ],
+    selectedLanguage: localStorage.getItem("hljsLanguage") ?? 'javascript',
+    selectedTheme: localStorage.getItem("hljsTheme") ?? 'default.min.css',
+
+    applyHighlightSettings() {
+      // 테마 CSS 교체
+      const themeLinkId = 'hljs-theme-link';
+      let linkEl = document.getElementById(themeLinkId);
+      if (!linkEl) {
+        linkEl = document.createElement('link');
+        linkEl.id = themeLinkId;
+        linkEl.rel = 'stylesheet';
+        document.head.appendChild(linkEl);
+      }
+      linkEl.href = `https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/${this.selectedTheme}`;
+
+
+      // 언어 적용: highlight 호출 시 selectedLanguage 사용
+      // 예: hljs.highlight(line.text, { language: this.selectedLanguage }).value
+
+      // 모달 닫기
+      localStorage.setItem("hljsLanguage", this.selectedLanguage);
+      localStorage.setItem("hljsTheme", this.selectedTheme);
+      this.showHighlightModal = false;
+    },
+  }
+}
 function EditorApp() {
   return {
+    ...SearchModule(),
+    ...HighlightModule(),
     mode: "editor",
     fileVisible: false,
     searchVisible: false,
@@ -583,173 +758,6 @@ function EditorApp() {
           console.log("[EDITOR] failed to parse data, use default data instead:", e);
         }
       }
-    },
-
-    searchQuery: '',
-    searchResults: [],
-    currentResult: -1,
-    lastQuery: '',
-
-    runSearch() {
-      if (!this.searchQuery) {
-        this.searchResults = [];
-        this.currentResult = -1;
-        this.lastQuery = '';
-        // 이전 하이라이트 제거
-        document.querySelectorAll('.highlighted').forEach(el => {
-          el.classList.remove('highlighted');
-        });
-        return;
-      }
-
-      // 검색어가 바뀌었을 때만 새로 계산
-      if (this.searchQuery !== this.lastQuery) {
-        this.searchResults = this.lines
-          .map((line, i) => line.text.includes(this.searchQuery) ? i : -1)
-          .filter(i => i >= 0);
-
-        this.currentResult = this.searchResults.length ? 0 : -1;
-        this.lastQuery = this.searchQuery;
-      }
-    },
-
-    searchNext() {
-      if (!this.searchResults.length) return;
-      this.currentResult = (this.currentResult + 1) % this.searchResults.length;
-      this.highlightSearch();
-    },
-
-    searchPrev() {
-      if (!this.searchResults.length) return;
-      this.currentResult = (this.currentResult - 1 + this.searchResults.length) % this.searchResults.length;
-      this.highlightSearch();
-    },
-
-    highlightSearch() {
-      // 이전 하이라이트 제거
-      document.querySelectorAll('.highlighted').forEach(el => {
-        el.classList.remove('highlighted');
-      });
-
-      if (this.currentResult === -1) return;
-
-      const index = this.searchResults[this.currentResult];
-      const elements = document.querySelectorAll('.line, .line-input');
-      const el = elements[index];
-
-      if (el) {
-        el.classList.add('highlighted');
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    },
-
-    showHighlightModal: false,
-    availableLanguages: hljs.listLanguages(),
-    availableThemes: [
-      "1c-light.min.css",
-      "a11y-dark.min.css",
-      "a11y-light.min.css",
-      "agate.min.css",
-      "an-old-hope.min.css",
-      "androidstudio.min.css",
-      "arduino-light.min.css",
-      "arta.min.css",
-      "ascetic.min.css",
-      "atom-one-dark.min.css",
-      "atom-one-dark-reasonable.min.css",
-      "atom-one-light.min.css",
-      "brown-paper.min.css",
-      "codepen-embed.min.css",
-      "color-brewer.min.css",
-      "cybertopia-cherry.min.css",
-      "cybertopia-dimmer.min.css",
-      "cybertopia-icecap.min.css",
-      "cybertopia-saturated.min.css",
-      "dark.min.css",
-      "default.min.css",
-      "devibeans.min.css",
-      "docco.min.css",
-      "far.min.css",
-      "felipec.min.css",
-      "foundation.min.css",
-      "github.min.css",
-      "github-dark.min.css",
-      "github-dark-dimmed.min.css",
-      "gml.min.css",
-      "googlecode.min.css",
-      "gradient-dark.min.css",
-      "gradient-light.min.css",
-      "grayscale.min.css",
-      "hybrid.min.css",
-      "idea.min.css",
-      "intellij-light.min.css",
-      "ir-black.min.css",
-      "isbl-editor-dark.min.css",
-      "isbl-editor-light.min.css",
-      "kimbie-dark.min.css",
-      "kimbie-light.min.css",
-      "lightfair.min.css",
-      "lioshi.min.css",
-      "magula.min.css",
-      "mono-blue.min.css",
-      "monokai.min.css",
-      "monokai-sublime.min.css",
-      "night-owl.min.css",
-      "nnfx-dark.min.css",
-      "nnfx-light.min.css",
-      "nord.min.css",
-      "obsidian.min.css",
-      "panda-syntax-dark.min.css",
-      "panda-syntax-light.min.css",
-      "paraiso-dark.min.css",
-      "paraiso-light.min.css",
-      "pojoaque.min.css",
-      "purebasic.min.css",
-      "qtcreator-dark.min.css",
-      "qtcreator-light.min.css",
-      "rainbow.min.css",
-      "rose-pine.min.css",
-      "rose-pine-dawn.min.css",
-      "rose-pine-moon.min.css",
-      "routeros.min.css",
-      "school-book.min.css",
-      "shades-of-purple.min.css",
-      "srcery.min.css",
-      "stackoverflow-dark.min.css",
-      "stackoverflow-light.min.css",
-      "sunburst.min.css",
-      "tokyo-night-dark.min.css",
-      "tokyo-night-light.min.css",
-      "tomorrow-night-blue.min.css",
-      "tomorrow-night-bright.min.css",
-      "vs.min.css",
-      "vs2015.min.css",
-      "xcode.min.css",
-      "xt256.min.css"
-    ],
-    selectedLanguage: localStorage.getItem("hljsLanguage") ?? 'javascript',
-    selectedTheme: localStorage.getItem("hljsTheme") ?? 'default.min.css',
-
-    applyHighlightSettings() {
-      // 테마 CSS 교체
-      const themeLinkId = 'hljs-theme-link';
-      let linkEl = document.getElementById(themeLinkId);
-      if (!linkEl) {
-        linkEl = document.createElement('link');
-        linkEl.id = themeLinkId;
-        linkEl.rel = 'stylesheet';
-        document.head.appendChild(linkEl);
-      }
-      linkEl.href = `https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/${this.selectedTheme}`;
-
-
-      // 언어 적용: highlight 호출 시 selectedLanguage 사용
-      // 예: hljs.highlight(line.text, { language: this.selectedLanguage }).value
-
-      // 모달 닫기
-      localStorage.setItem("hljsLanguage", this.selectedLanguage);
-      localStorage.setItem("hljsTheme", this.selectedTheme);
-      this.showHighlightModal = false;
     },
 
     init() {
