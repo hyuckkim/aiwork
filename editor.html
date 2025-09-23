@@ -164,7 +164,7 @@ input.line-input {
         </button>
       </template>
       <button
-        @click="files.push({lines:[{id:1,text:''}], selection:null, undoStack:[], redoStack:[], scroll: 0, nextId: 2}); currentFileIndex = files.length-1">+</button>
+        @click="files.push(generateFile('첫 번째 줄', '두 번째 줄')); switchFile(files.length-1)">+</button>
     </div>
     <div x-show="searchVisible" style="display:flex; align-items:center; gap:4px; margin-left:16px;">
       <input type="text" placeholder="검색…" x-model="searchQuery" @input="runSearch(lines)" @keyup.enter="searchNext()"
@@ -236,6 +236,15 @@ function snapshotLines(lines) {
 // 적용: 스냅샷을 기반으로 "항상 새 객체"를 만들어 DOM에 꽂기
 function materialize(snapshot) {
   return snapshot.map(l => ({ id: l.id, text: l.text }));
+}
+function generateFile(...lines) {
+  return {
+    lines: lines.map((l, i) => ({ id: i + 1, text: l})),
+    undoStack: [],
+    redoStack: [],
+    scroll: 0,
+    nextId: lines.length + 1,
+  }
 }
 
 function SearchModule() {
@@ -418,22 +427,8 @@ function EditorApp() {
     fileVisible: false,
     searchVisible: false,
     files: [
-      {
-        lines: [{ id: 1, text: "첫 줄" }, { id: 2, text: "둘째 줄" }],
-        selection: null,
-        undoStack: [],
-        redoStack: [],
-        scroll: 0,
-        nextId: 3
-      },
-      {
-        lines: [{ id: 1, text: "A" }, { id: 2, text: "B" }],
-        selection: null,
-        undoStack: [],
-        redoStack: [],
-        scroll: 0,
-        nextId: 3
-      }
+      generateFile("첫 번째 줄", "두 번째 줄"),
+      generateFile("첫 번째 줄", "두 번째 줄"),
     ],
     currentFileIndex: 0,
     get lines() {
