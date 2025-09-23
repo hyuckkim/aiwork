@@ -646,21 +646,21 @@ function EditorApp() {
       const cmd = {
         do: () => {
           this.lines.splice(i, 1, ...materialize(newSnap));
-          setTimeout(() => {
+          this.$nextTick(() => {
             const inputs = document.querySelectorAll('input.line-input');
             const nextInput = inputs[i + 1];
             if (nextInput) {
               nextInput.focus();
               nextInput.setSelectionRange(0, 0);
             }
-          }, 0);
+          });
         },
         undo: () => {
           this.lines.splice(i, 2, ...materialize(oldSnap));
-          setTimeout(() => {
+          this.$nextTick(() => {
             const inputs = document.querySelectorAll('input.line-input');
             if (inputs[i]) inputs[i].focus();
-          }, 0);
+          });
         }
       };
 
@@ -684,18 +684,18 @@ function EditorApp() {
       const cmd = {
         do: () => {
           this.lines.splice(i - 1, 2, ...materialize(mergedSnap));
-          setTimeout(() => {
+          this.$nextTick(() => {
             const inputs = document.querySelectorAll('input.line-input');
             const newInput = inputs[i - 1];
             if (newInput) {
               newInput.focus();
               newInput.setSelectionRange(prevSnap[0].text.length, prevSnap[0].text.length);
             }
-          }, 0);
+          });
         },
         undo: () => {
           this.lines.splice(i - 1, 1, ...materialize(prevSnap), ...materialize(currSnap));
-          setTimeout(() => {
+          this.$nextTick(() => {
             const inputs = document.querySelectorAll('input.line-input');
             const currInput = inputs[i];
             if (currInput) {
