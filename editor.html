@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link rel="manifest" href="/aiwork/manifest.json" />
-<meta name="theme-color" content="#000000" />
-<title>Vi-inspired Editor</title>
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-<link id="hljs-theme-link" rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/default.min.css">
-<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
-<style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="manifest" href="/aiwork/manifest.json" />
+  <meta name="theme-color" content="#000000" />
+  <title>Vi-inspired Editor</title>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <link id="hljs-theme-link" rel="stylesheet"
+    href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/default.min.css">
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+  <style>
 /* 공통 */
 body {
   font-family: sans-serif;
@@ -34,7 +36,8 @@ body {
 /* 파일 탭 */
 .file-tabs {
   display: flex;
-  width: 100%;       /* 화면 전체 너비 사용 */
+  width: 100%;
+  /* 화면 전체 너비 사용 */
   gap: 4px;
   padding: 4px;
   overflow-x: auto;
@@ -42,7 +45,8 @@ body {
 }
 
 .file-tabs button {
-  flex: 0 0 auto;    /* 버튼 크기 유지 */
+  flex: 0 0 auto;
+  /* 버튼 크기 유지 */
   padding: 4px 8px;
 }
 
@@ -53,14 +57,16 @@ body {
 }
 
 /* 에디터 줄 */
-.line, .line-input {
+.line,
+.line-input {
   font-size: 16px;
   line-height: 2em;
   min-height: 2em;
   padding: 4px 8px;
   box-sizing: border-box;
   overflow-x: auto;
-  white-space: pre;          /* hljs 덮어쓰기 방지 */
+  white-space: pre;
+  /* hljs 덮어쓰기 방지 */
   font-family: inherit;
   cursor: pointer;
 
@@ -69,7 +75,8 @@ body {
 }
 
 .line:empty::before {
-  content: "\00a0"; /* 빈 줄 표시 */
+  content: "\00a0";
+  /* 빈 줄 표시 */
 }
 
 /* 선택/강조 */
@@ -79,15 +86,18 @@ body {
 
 .line.highlighted,
 .line-input.highlighted {
-  background-color: #ffe066; /* 밝은 노란색 강조 */
+  background-color: #ffe066;
+  /* 밝은 노란색 강조 */
   transition: background-color 0.3s ease;
 }
 
 /* 인풋 전용 */
 input.line-input {
   width: 100%;
-  border: none;                     /* 상단/좌우 border 제거 */
-  border-bottom: 1px dashed #ddd;   /* 밑줄 유지 */
+  border: none;
+  /* 상단/좌우 border 제거 */
+  border-bottom: 1px dashed #ddd;
+  /* 밑줄 유지 */
   outline: none;
   background: transparent;
   color: inherit;
@@ -101,129 +111,119 @@ input.line-input {
   inset: 0;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 2000;
 }
 
 /* Highlight.js */
 .line span.hljs {
-  white-space: inherit; /* 부모 상속 */
+  white-space: inherit;
+  /* 부모 상속 */
 }
-</style>
+  </style>
 </head>
-<body x-data="editorApp">
 
-<!-- Highlight.js 설정 모달 -->
-<div id="highlightSettingsModal" class="modal"
-     x-show="showHighlightModal"
-     x-cloak>
-  <div style="background: white; padding: 20px; border-radius: 8px; width: 320px; max-width: 90%;">
-    <h2 style="margin-top:0;">Highlight.js 설정</h2>
+<body x-data="EditorApp()">
 
-    <!-- 언어 선택 -->
-    <label for="hljsLanguage" style="display:block; margin-top:10px;">언어 선택</label>
-    <select id="hljsLanguage" x-model="selectedLanguage" style="width:100%; padding:6px;">
-      <template x-for="lang in availableLanguages" :key="lang">
-        <option :value="lang" x-text="lang" :selected="lang===selectedLanguage"></option>
-      </template>
-    </select>
+  <!-- Highlight.js 설정 모달 -->
+  <div id="highlightSettingsModal" class="modal" x-show="showHighlightModal" x-cloak>
+    <div style="background: white; padding: 20px; border-radius: 8px; width: 320px; max-width: 90%;">
+      <h2 style="margin-top:0;">Highlight.js 설정</h2>
 
-    <!-- 테마 선택 -->
-    <label for="hljsTheme" style="display:block; margin-top:10px;">테마 선택</label>
-    <select id="hljsTheme" x-model="selectedTheme" style="width:100%; padding:6px;">
-      <template x-for="theme in availableThemes" :key="theme">
-        <option :value="theme" x-text="theme" :selected="theme===selectedTheme"></option>
-      </template>
-    </select>
+      <!-- 언어 선택 -->
+      <label for="hljsLanguage" style="display:block; margin-top:10px;">언어 선택</label>
+      <select id="hljsLanguage" x-model="selectedLanguage" style="width:100%; padding:6px;">
+        <template x-for="lang in availableLanguages" :key="lang">
+          <option :value="lang" x-text="lang" :selected="lang===selectedLanguage"></option>
+        </template>
+      </select>
 
-    <!-- 버튼 영역 -->
-    <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
-      <button @click="showHighlightModal=false">취소</button>
-      <button @click="applyHighlightSettings()">확인</button>
+      <!-- 테마 선택 -->
+      <label for="hljsTheme" style="display:block; margin-top:10px;">테마 선택</label>
+      <select id="hljsTheme" x-model="selectedTheme" style="width:100%; padding:6px;">
+        <template x-for="theme in availableThemes" :key="theme">
+          <option :value="theme" x-text="theme" :selected="theme===selectedTheme"></option>
+        </template>
+      </select>
+
+      <!-- 버튼 영역 -->
+      <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
+        <button @click="showHighlightModal=false">취소</button>
+        <button @click="applyHighlightSettings()">확인</button>
+      </div>
     </div>
   </div>
-</div>
 
 
-<!-- 툴바 -->
-<div class="toolbar">
-<div class="file-tabs" x-show="fileVisible" style="display:flex; gap:4px; padding:4px;">
-  <template x-for="(file, i) in files" :key="i">
-    <button
-      @click="switchFile(i)"
-      :style="currentFileIndex === i ? 'background-color:#7dd3fc;' : ''"
-    >
-      File <span x-text="i+1"></span>
-    </button>
-  </template>
-  <button @click="files.push({lines:[{id:1,text:''}], selection:null, undoStack:[], redoStack:[], scroll: 0, nextId: 2}); currentFileIndex = files.length-1">+</button>
-</div>
-<div x-show="searchVisible" style="display:flex; align-items:center; gap:4px; margin-left:16px;">
-  <input type="text" placeholder="검색…" x-model="searchQuery"
-@input="runSearch()" @keyup.enter="searchNext()" style="padding:4px; font-size:14px;" />
-  <button @click="searchPrev()">▲</button>
-  <button @click="searchNext()">▼</button>
-<span x-text="searchResults.length ? (currentResult + 1) + ' of ' + searchResults.length : '0 of 0'"></span>
-</div>
-  <button @click="toggleMode()">모드: <span x-text="mode"></span></button>
-  <template x-if="mode==='editor'">
-    <div style="display:flex; gap:4px;">
-      <button @click="manualCut()">✂ 잘라내기</button>
-      <button @click="manualCopy()">📄 복사</button>
-      <button @click="paste()">📋 붙여넣기</button>
-      <button @click="replace()">♻ 치환</button>
-      <button @click="selectAll()">전체 선택</button>
-      <button @click="deleteSelection()">선택 영역 삭제</button>
-    </div>
-  </template>
-  <button @click="undo()" :disabled="undoStack.length===0">↩ undo</button>
-  <button @click="redo()" :disabled="redoStack.length===0">↪ redo</button>
-  <button @click="showHighlightModal = true">🎨</button>
-  <button @click="fileVisible = !fileVisible">📁</button>
-  <button @click="searchVisible = !searchVisible">🔍</button>
-</div>
-
-<!-- 본문 -->
-<div id="editor-container">
-  <!-- 에디터 모드 -->
-  <template x-if="mode==='editor'">
-    <div class="hljs">
-      <template x-for="(line, i) in lines" :key="line.id">
-<div class="line"
-  :class="{selected: selection && i>=selection.start && i<=selection.end}"
-  @click="toggleSelect(i)" x-html="hljs.highlight(line.text, {language: selectedLanguage}).value">
-</div>
+  <!-- 툴바 -->
+  <div class="toolbar">
+    <div class="file-tabs" x-show="fileVisible" style="display:flex; gap:4px; padding:4px;">
+      <template x-for="(file, i) in files" :key="i">
+        <button @click="switchFile(i)" :style="currentFileIndex === i ? 'background-color:#7dd3fc;' : ''">
+          File <span x-text="i+1"></span>
+        </button>
       </template>
+      <button
+        @click="files.push({lines:[{id:1,text:''}], selection:null, undoStack:[], redoStack:[], scroll: 0, nextId: 2}); currentFileIndex = files.length-1">+</button>
     </div>
-  </template>
-
-  <!-- 텍스트 모드 -->
-  <template x-if="mode==='text'">
-    <div class="hljs">
-      <template x-for="(line,i) in lines" :key="line.id">
-        <input
-          class="line-input"
-          type="text"
-          x-model="lines[i].text"
-  @focus="lines[i]._oldText = lines[i].text"
-  @blur="recordEdit(i)"
-          @keyup.enter.prevent="insertLine(i, $event)"
-@keyup.backspace="mergeWithPrev(i,$event)"
-          enterkeyhint="enter"
-        />
-
-      </template>
+    <div x-show="searchVisible" style="display:flex; align-items:center; gap:4px; margin-left:16px;">
+      <input type="text" placeholder="검색…" x-model="searchQuery" @input="runSearch()" @keyup.enter="searchNext()"
+        style="padding:4px; font-size:14px;" />
+      <button @click="searchPrev()">▲</button>
+      <button @click="searchNext()">▼</button>
+      <span x-text="searchResults.length ? (currentResult + 1) + ' of ' + searchResults.length : '0 of 0'"></span>
     </div>
-  </template>
-</div>
+    <button @click="toggleMode()">모드: <span x-text="mode"></span></button>
+    <template x-if="mode==='editor'">
+      <div style="display:flex; gap:4px;">
+        <button @click="manualCut()">✂ 잘라내기</button>
+        <button @click="manualCopy()">📄 복사</button>
+        <button @click="paste()">📋 붙여넣기</button>
+        <button @click="replace()">♻ 치환</button>
+        <button @click="selectAll()">전체 선택</button>
+        <button @click="deleteSelection()">선택 영역 삭제</button>
+      </div>
+    </template>
+    <button @click="undo()" :disabled="undoStack.length===0">↩ undo</button>
+    <button @click="redo()" :disabled="redoStack.length===0">↪ redo</button>
+    <button @click="showHighlightModal = true">🎨</button>
+    <button @click="fileVisible = !fileVisible">📁</button>
+    <button @click="searchVisible = !searchVisible">🔍</button>
+  </div>
 
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/aiwork/sw.js', { scope: '/aiwork/editor.html' })
-      .then(() => console.log('Service Worker Registered'));
-  }
-</script>
-<script>
+  <!-- 본문 -->
+  <div id="editor-container">
+    <!-- 에디터 모드 -->
+    <template x-if="mode==='editor'">
+      <div class="hljs">
+        <template x-for="(line, i) in lines" :key="line.id">
+          <div class="line" :class="{selected: selection && i>=selection.start && i<=selection.end}"
+            @click="toggleSelect(i)" x-html="hljs.highlight(line.text, {language: selectedLanguage}).value">
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <!-- 텍스트 모드 -->
+    <template x-if="mode==='text'">
+      <div class="hljs">
+        <template x-for="(line,i) in lines" :key="line.id">
+          <input class="line-input" type="text" x-model="lines[i].text" @focus="lines[i]._oldText = lines[i].text"
+            @blur="recordEdit(i)" @keyup.enter.prevent="insertLine(i, $event)"
+            @keyup.backspace="mergeWithPrev(i,$event)" enterkeyhint="enter" />
+
+        </template>
+      </div>
+    </template>
+  </div>
+
+  <script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/aiwork/sw.js', { scope: '/aiwork/editor.html' })
+    .then(() => console.log('Service Worker Registered'));
+}
+  </script>
+  <script>
 // 스냅샷: 현재 라인을 깊게 복사하고, 불변으로 보관
 function snapshotLines(lines) {
   const snap = lines.map(l => ({ id: l.id, text: l.text }));
@@ -237,531 +237,528 @@ function snapshotLines(lines) {
 function materialize(snapshot) {
   return snapshot.map(l => ({ id: l.id, text: l.text }));
 }
-
-
-document.addEventListener("alpine:init",()=>{
-Alpine.data("editorApp",()=>({
-mode:"editor",
-fileVisible: false,
-searchVisible: false,
-files: [
-  {
-    lines: [{id:1,text:"첫 줄"}, {id:2,text:"둘째 줄"}],
+function EditorApp() {
+  return {
+    mode: "editor",
+    fileVisible: false,
+    searchVisible: false,
+    files: [
+      {
+        lines: [{ id: 1, text: "첫 줄" }, { id: 2, text: "둘째 줄" }],
+        selection: null,
+        undoStack: [],
+        redoStack: [],
+        scroll: 0,
+        nextId: 3
+      },
+      {
+        lines: [{ id: 1, text: "A" }, { id: 2, text: "B" }],
+        selection: null,
+        undoStack: [],
+        redoStack: [],
+        scroll: 0,
+        nextId: 3
+      }
+    ],
+    currentFileIndex: 0,
+    get lines() {
+      return this.files[this.currentFileIndex].lines;
+    },
+    set lines(newLines) {
+      this.files[this.currentFileIndex].lines = newLines;
+    },
+    get undoStack() {
+      return this.files[this.currentFileIndex].undoStack;
+    },
+    set undoStack(newStack) {
+      this.files[this.currentFileIndex].undoStack = newStack;
+    },
+    get redoStack() {
+      return this.files[this.currentFileIndex].redoStack;
+    },
+    set redoStack(newStack) {
+      this.files[this.currentFileIndex].redoStack = newStack;
+    },
+    get scroll() {
+      return this.files[this.currentFileIndex].scroll;
+    },
+    set scroll(val) {
+      this.files[this.currentFileIndex].scroll = val;
+    },
     selection: null,
-    undoStack: [],
-    redoStack: [],
-    scroll: 0,
-    nextId: 3
-  },
-  {
-    lines: [{id:1,text:"A"}, {id:2,text:"B"}],
-    selection: null,
-    undoStack: [],
-    redoStack: [],
-    scroll: 0,
-    nextId: 3
-  }
-],
-currentFileIndex: 0,
-get lines() {
-  return this.files[this.currentFileIndex].lines;
-},
-set lines(newLines) {
-  this.files[this.currentFileIndex].lines = newLines;
-},
-get undoStack() {
-  return this.files[this.currentFileIndex].undoStack;
-},
-set undoStack(newStack) {
-  this.files[this.currentFileIndex].undoStack = newStack;
-},
-get redoStack() {
-  return this.files[this.currentFileIndex].redoStack;
-},
-set redoStack(newStack) {
-  this.files[this.currentFileIndex].redoStack = newStack;
-},
-get scroll() {
-  return this.files[this.currentFileIndex].scroll;
-},
-set scroll(val) {
-  this.files[this.currentFileIndex].scroll = val;
-},
-selection:null,
-get currentFile() {
-  return this.files[this.currentFileIndex];
-},
-genId() {
-  return this.currentFile.nextId++;
-},
+    get currentFile() {
+      return this.files[this.currentFileIndex];
+    },
+    genId() {
+      return this.currentFile.nextId++;
+    },
 
-toggleMode(){ this.mode = this.mode==="editor" ? "text":"editor"; this.selection=null; },
+    toggleMode() { this.mode = this.mode === "editor" ? "text" : "editor"; this.selection = null; },
 
-switchFile(i) {
-// 현재 스크롤 저장
-this.files[this.currentFileIndex].scroll = window.scrollY || window.pageYOffset;
-  this.currentFileIndex = i;
-  // 새 파일 스크롤 복원
-  this.$nextTick(() => {
-window.scrollTo(0, this.files[this.currentFileIndex].scroll || 0);
-  });
-},
-toggleSelect(i) {
-  // 선택이 없으면 새로 선택
-  if (!this.selection) {
-    this.selection = { start: i, end: i };
-    this.lastClicked = i;
-    return;
-  }
+    switchFile(i) {
+      // 현재 스크롤 저장
+      this.files[this.currentFileIndex].scroll = window.scrollY || window.pageYOffset;
+      this.currentFileIndex = i;
+      // 새 파일 스크롤 복원
+      this.$nextTick(() => {
+        window.scrollTo(0, this.files[this.currentFileIndex].scroll || 0);
+      });
+    },
+    toggleSelect(i) {
+      // 선택이 없으면 새로 선택
+      if (!this.selection) {
+        this.selection = { start: i, end: i };
+        this.lastClicked = i;
+        return;
+      }
 
-  // 선택 범위가 한 줄이고, 같은 줄을 다시 클릭하면 취소
-  if (this.selection.start === this.selection.end && this.selection.start === i) {
-    this.selection = null;
-    this.lastClicked = null;
-    return;
-  }
+      // 선택 범위가 한 줄이고, 같은 줄을 다시 클릭하면 취소
+      if (this.selection.start === this.selection.end && this.selection.start === i) {
+        this.selection = null;
+        this.lastClicked = null;
+        return;
+      }
 
-  // 기존 로직: lastClicked 기준으로 범위 조정
-  if (i >= this.lastClicked) {
-    this.selection.start = this.lastClicked;
-    this.selection.end = i;
-  } else {
-    this.selection.start = i;
-    this.selection.end = this.lastClicked;
-  }
+      // 기존 로직: lastClicked 기준으로 범위 조정
+      if (i >= this.lastClicked) {
+        this.selection.start = this.lastClicked;
+        this.selection.end = i;
+      } else {
+        this.selection.start = i;
+        this.selection.end = this.lastClicked;
+      }
 
-  this.lastClicked = i;
-},
+      this.lastClicked = i;
+    },
 
-getSelectedLines(){
-  if(!this.selection) return [];
-  return this.lines.slice(this.selection.start,this.selection.end+1);
-},
-selectAll() {
-  if(this.lines.length === 0) return;
-  this.selection = { start: 0, end: this.lines.length - 1 };
-},
+    getSelectedLines() {
+      if (!this.selection) return [];
+      return this.lines.slice(this.selection.start, this.selection.end + 1);
+    },
+    selectAll() {
+      if (this.lines.length === 0) return;
+      this.selection = { start: 0, end: this.lines.length - 1 };
+    },
 
-deleteSelection() {
-  if (!this.selection) return;
-  const { start, end } = this.selection;
-  const oldSnap = snapshotLines(this.lines.slice(start, end + 1));
+    deleteSelection() {
+      if (!this.selection) return;
+      const { start, end } = this.selection;
+      const oldSnap = snapshotLines(this.lines.slice(start, end + 1));
 
-  const cmd = {
-    do: () => {
-      this.lines.splice(start, end - start + 1);
+      const cmd = {
+        do: () => {
+          this.lines.splice(start, end - start + 1);
+          this.selection = null;
+        },
+        undo: () => {
+          this.lines.splice(start, 0, ...materialize(oldSnap));
+        }
+      };
+
+      this.execute(cmd);
+    },
+
+    execute(cmd) {
+      cmd.do();
+      this.undoStack.push(cmd);
+      this.redoStack = [];
+      this.saveFilesToStorage();
+    },
+
+    async writeClipboard(text, manual = false) {
+      if (!manual) return;
+      try { await navigator.clipboard.writeText(text); }
+      catch (e) { console.warn("Clipboard write failed", e); }
+    },
+
+    manualCopy() {
+      if (!this.selection) return;
+      const text = this.getSelectedLines().map(l => l.text).join('\n');
+      this.writeClipboard(text, true);
       this.selection = null;
     },
-    undo: () => {
-      this.lines.splice(start, 0, ...materialize(oldSnap));
-    }
-  };
 
-  this.execute(cmd);
-},
+    manualCut() {
+      if (!this.selection) return;
+      const { start, end } = this.selection;
+      const oldSnap = snapshotLines(this.lines.slice(start, end + 1));
 
-execute(cmd){
-  cmd.do();
-  this.undoStack.push(cmd);
-  this.redoStack=[];
-this.saveFilesToStorage();
-},
+      const cmd = {
+        do: () => {
+          this.lines.splice(start, end - start + 1);
+          this.selection = null;
+        },
+        undo: () => {
+          this.lines.splice(start, 0, ...materialize(oldSnap));
+        },
+        manual: () => this.writeClipboard(oldSnap.map(l => l.text).join('\n'), true)
+      };
 
-async writeClipboard(text,manual=false){
-  if(!manual) return;
-  try{ await navigator.clipboard.writeText(text); } 
-  catch(e){ console.warn("Clipboard write failed",e); }
-},
-
-manualCopy(){
-  if(!this.selection) return;
-  const text = this.getSelectedLines().map(l=>l.text).join('\n');
-  this.writeClipboard(text,true);
-  this.selection=null;
-},
-
-manualCut() {
-  if (!this.selection) return;
-  const { start, end } = this.selection;
-  const oldSnap = snapshotLines(this.lines.slice(start, end + 1));
-
-  const cmd = {
-    do: () => {
-      this.lines.splice(start, end - start + 1);
-      this.selection = null;
+      this.execute(cmd);
+      cmd.manual();
     },
-    undo: () => {
-      this.lines.splice(start, 0, ...materialize(oldSnap));
-    },
-    manual: () => this.writeClipboard(oldSnap.map(l => l.text).join('\n'), true)
-  };
 
-  this.execute(cmd);
-  cmd.manual();
-},
+    async paste() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (!text) return;
 
-async paste() {
-  try {
-    const text = await navigator.clipboard.readText();
-    if (!text) return;
+        const toInsertSnap = snapshotLines(
+          text.split('\n').map(t => ({ id: this.genId(), text: t }))
+        );
+        const index = this.selection ? this.selection.end : this.lines.length - 1;
 
-    const toInsertSnap = snapshotLines(
-      text.split('\n').map(t => ({ id: this.genId(), text: t }))
-    );
-    const index = this.selection ? this.selection.end : this.lines.length - 1;
+        const cmd = {
+          do: () => {
+            this.lines.splice(index + 1, 0, ...materialize(toInsertSnap));
+            this.selection = null;
+          },
+          undo: () => {
+            this.lines.splice(index + 1, toInsertSnap.length);
+          }
+        };
 
-    const cmd = {
-      do: () => {
-        this.lines.splice(index + 1, 0, ...materialize(toInsertSnap));
-        this.selection = null;
-      },
-      undo: () => {
-        this.lines.splice(index + 1, toInsertSnap.length);
+        this.execute(cmd);
+      } catch (e) {
+        console.warn("Clipboard read failed", e);
       }
-    };
+    },
 
-    this.execute(cmd);
-  } catch (e) {
-    console.warn("Clipboard read failed", e);
- }
-},
+    async replace() {
+      if (!this.selection) return;
+      const { start, end } = this.selection;
 
-async replace() {
-  if (!this.selection) return;
-  const { start, end } = this.selection;
+      try {
+        const text = await navigator.clipboard.readText();
+        if (!text) return;
 
-  try {
-    const text = await navigator.clipboard.readText();
-    if (!text) return;
+        const newSnap = snapshotLines(
+          text.split('\n').map(t => ({ id: this.genId(), text: t }))
+        );
+        const oldSnap = snapshotLines(this.lines.slice(start, end + 1));
 
-    const newSnap = snapshotLines(
-      text.split('\n').map(t => ({ id: this.genId(), text: t }))
-    );
-    const oldSnap = snapshotLines(this.lines.slice(start, end + 1));
+        const cmd = {
+          do: () => {
+            this.lines.splice(start, end - start + 1, ...materialize(newSnap));
+            this.selection = null;
+          },
+          undo: () => {
+            this.lines.splice(start, newSnap.length, ...materialize(oldSnap));
+          }
+        };
 
-    const cmd = {
-      do: () => {
-        this.lines.splice(start, end - start + 1, ...materialize(newSnap));
-        this.selection = null;
-      },
-      undo: () => {
-        this.lines.splice(start, newSnap.length, ...materialize(oldSnap));
+        this.execute(cmd);
+      } catch (e) {
+        console.warn("Clipboard read failed", e);
       }
-    };
-
-    this.execute(cmd);
-  } catch (e) {
-    console.warn("Clipboard read failed", e);
-  }
-},
-
-insertLine(i, event) {
-  this.recordEdit(i);
-  const input = event.target;
-  const cursorPos = input.selectionStart;
-  const value = input.value;
-
-  const before = value.slice(0, cursorPos);
-  const after = value.slice(cursorPos);
-
-  const oldSnap = snapshotLines([this.lines[i]]);
-  const newSnap = snapshotLines([
-    { id: this.genId(), text: before },
-    { id: this.genId(), text: after }
-  ]);
-
-  const cmd = {
-    do: () => {
-      this.lines.splice(i, 1, ...materialize(newSnap));
-      setTimeout(() => {
-        const inputs = document.querySelectorAll('input.line-input');
-        const nextInput = inputs[i + 1];
-        if (nextInput) {
-          nextInput.focus();
-          nextInput.setSelectionRange(0, 0);
-        }
-      }, 0);
     },
-    undo: () => {
-      this.lines.splice(i, 2, ...materialize(oldSnap));
-      setTimeout(() => {
-        const inputs = document.querySelectorAll('input.line-input');
-        if (inputs[i]) inputs[i].focus();
-      }, 0);
-    }
-  };
 
-  this.execute(cmd);
-},
-mergeWithPrev(i, event) {
-  this.recordEdit(i);
-  const input = event.target;
-  const cursorPos = input.selectionStart;
+    insertLine(i, event) {
+      this.recordEdit(i);
+      const input = event.target;
+      const cursorPos = input.selectionStart;
+      const value = input.value;
 
-  if (cursorPos !== 0) return;
-  if (i === 0) return;
-  event.preventDefault();
+      const before = value.slice(0, cursorPos);
+      const after = value.slice(cursorPos);
 
-  const prevSnap = snapshotLines([this.lines[i - 1]]);
-  const currSnap = snapshotLines([this.lines[i]]);
-  const mergedSnap = snapshotLines([
-    { id: this.genId(), text: prevSnap[0].text + currSnap[0].text }
-  ]);
+      const oldSnap = snapshotLines([this.lines[i]]);
+      const newSnap = snapshotLines([
+        { id: this.genId(), text: before },
+        { id: this.genId(), text: after }
+      ]);
 
-  const cmd = {
-    do: () => {
-      this.lines.splice(i - 1, 2, ...materialize(mergedSnap));
-      setTimeout(() => {
-        const inputs = document.querySelectorAll('input.line-input');
-        const newInput = inputs[i - 1];
-        if (newInput) {
-          newInput.focus();
-          newInput.setSelectionRange(prevSnap[0].text.length, prevSnap[0].text.length);
+      const cmd = {
+        do: () => {
+          this.lines.splice(i, 1, ...materialize(newSnap));
+          setTimeout(() => {
+            const inputs = document.querySelectorAll('input.line-input');
+            const nextInput = inputs[i + 1];
+            if (nextInput) {
+              nextInput.focus();
+              nextInput.setSelectionRange(0, 0);
+            }
+          }, 0);
+        },
+        undo: () => {
+          this.lines.splice(i, 2, ...materialize(oldSnap));
+          setTimeout(() => {
+            const inputs = document.querySelectorAll('input.line-input');
+            if (inputs[i]) inputs[i].focus();
+          }, 0);
         }
-      }, 0);
+      };
+
+      this.execute(cmd);
     },
-    undo: () => {
-      this.lines.splice(i - 1, 1, ...materialize(prevSnap), ...materialize(currSnap));
-      setTimeout(() => {
-        const inputs = document.querySelectorAll('input.line-input');
-        const currInput = inputs[i];
-        if (currInput) {
-          currInput.focus();
-          currInput.setSelectionRange(0, 0);
+    mergeWithPrev(i, event) {
+      this.recordEdit(i);
+      const input = event.target;
+      const cursorPos = input.selectionStart;
+
+      if (cursorPos !== 0) return;
+      if (i === 0) return;
+      event.preventDefault();
+
+      const prevSnap = snapshotLines([this.lines[i - 1]]);
+      const currSnap = snapshotLines([this.lines[i]]);
+      const mergedSnap = snapshotLines([
+        { id: this.genId(), text: prevSnap[0].text + currSnap[0].text }
+      ]);
+
+      const cmd = {
+        do: () => {
+          this.lines.splice(i - 1, 2, ...materialize(mergedSnap));
+          setTimeout(() => {
+            const inputs = document.querySelectorAll('input.line-input');
+            const newInput = inputs[i - 1];
+            if (newInput) {
+              newInput.focus();
+              newInput.setSelectionRange(prevSnap[0].text.length, prevSnap[0].text.length);
+            }
+          }, 0);
+        },
+        undo: () => {
+          this.lines.splice(i - 1, 1, ...materialize(prevSnap), ...materialize(currSnap));
+          setTimeout(() => {
+            const inputs = document.querySelectorAll('input.line-input');
+            const currInput = inputs[i];
+            if (currInput) {
+              currInput.focus();
+              currInput.setSelectionRange(0, 0);
+            }
+          }, 0);
         }
-      }, 0);
-    }
-  };
+      };
 
-  this.execute(cmd);
-},
-recordEdit(i) {
-  const oldText = this.lines[i]._oldText;
-  const newText = this.lines[i].text;
-  if (oldText === newText) return;
-
-  const oldSnap = { id: this.lines[i].id, text: oldText };
-  const newSnap = { id: this.lines[i].id, text: newText };
-
-  const cmd = {
-    do: () => {
-      this.lines.splice(i, 1, { id: newSnap.id, text: newSnap.text });
+      this.execute(cmd);
     },
-    undo: () => {
-      this.lines.splice(i, 1, { id: oldSnap.id, text: oldSnap.text });
-    }
-  };
+    recordEdit(i) {
+      const oldText = this.lines[i]._oldText;
+      const newText = this.lines[i].text;
+      if (oldText === newText) return;
 
-  this.execute(cmd);
-},
+      const oldSnap = { id: this.lines[i].id, text: oldText };
+      const newSnap = { id: this.lines[i].id, text: newText };
 
-undo(){
-  if(this.undoStack.length===0) return;
-  const cmd = this.undoStack.pop();
-  cmd.undo?.();
-  this.redoStack.push(cmd);
-this.saveFilesToStorage();
-},
+      const cmd = {
+        do: () => {
+          this.lines.splice(i, 1, { id: newSnap.id, text: newSnap.text });
+        },
+        undo: () => {
+          this.lines.splice(i, 1, { id: oldSnap.id, text: oldSnap.text });
+        }
+      };
 
-redo(){
-  if(this.redoStack.length===0) return;
-  const cmd = this.redoStack.pop();
-  cmd.do?.();
-  this.undoStack.push(cmd);
-this.saveFilesToStorage();
-},
-  saveFilesToStorage() {
-    localStorage.setItem("editorFiles", JSON.stringify(this.files));
-  },
+      this.execute(cmd);
+    },
 
-loadFilesFromStorage() {
-  const saved = localStorage.getItem("editorFiles");
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      this.files.splice(0, this.files.length, ...parsed);
-    } catch (e) {
-      console.error("Failed to parse editorFiles", e);
-    }
+    undo() {
+      if (this.undoStack.length === 0) return;
+      const cmd = this.undoStack.pop();
+      cmd.undo?.();
+      this.redoStack.push(cmd);
+      this.saveFilesToStorage();
+    },
+
+    redo() {
+      if (this.redoStack.length === 0) return;
+      const cmd = this.redoStack.pop();
+      cmd.do?.();
+      this.undoStack.push(cmd);
+      this.saveFilesToStorage();
+    },
+    saveFilesToStorage() {
+      localStorage.setItem("editorFiles", JSON.stringify(this.files));
+    },
+
+    loadFilesFromStorage() {
+      const saved = localStorage.getItem("editorFiles");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          this.files.splice(0, this.files.length, ...parsed);
+          console.log('[EDITOR] data restored: ', Alpine.raw(this.files));
+        } catch (e) {
+          console.log("[EDITOR] failed to parse data, use default data instead:", e);
+        }
+      }
+    },
+
+    searchQuery: '',
+    searchResults: [],
+    currentResult: -1,
+    lastQuery: '',
+
+    runSearch() {
+      if (!this.searchQuery) {
+        this.searchResults = [];
+        this.currentResult = -1;
+        this.lastQuery = '';
+        // 이전 하이라이트 제거
+        document.querySelectorAll('.highlighted').forEach(el => {
+          el.classList.remove('highlighted');
+        });
+        return;
+      }
+
+      // 검색어가 바뀌었을 때만 새로 계산
+      if (this.searchQuery !== this.lastQuery) {
+        this.searchResults = this.lines
+          .map((line, i) => line.text.includes(this.searchQuery) ? i : -1)
+          .filter(i => i >= 0);
+
+        this.currentResult = this.searchResults.length ? 0 : -1;
+        this.lastQuery = this.searchQuery;
+      }
+    },
+
+    searchNext() {
+      if (!this.searchResults.length) return;
+      this.currentResult = (this.currentResult + 1) % this.searchResults.length;
+      this.highlightSearch();
+    },
+
+    searchPrev() {
+      if (!this.searchResults.length) return;
+      this.currentResult = (this.currentResult - 1 + this.searchResults.length) % this.searchResults.length;
+      this.highlightSearch();
+    },
+
+    highlightSearch() {
+      // 이전 하이라이트 제거
+      document.querySelectorAll('.highlighted').forEach(el => {
+        el.classList.remove('highlighted');
+      });
+
+      if (this.currentResult === -1) return;
+
+      const index = this.searchResults[this.currentResult];
+      const elements = document.querySelectorAll('.line, .line-input');
+      const el = elements[index];
+
+      if (el) {
+        el.classList.add('highlighted');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    },
+
+    showHighlightModal: false,
+    availableLanguages: hljs.listLanguages(),
+    availableThemes: [
+      "1c-light.min.css",
+      "a11y-dark.min.css",
+      "a11y-light.min.css",
+      "agate.min.css",
+      "an-old-hope.min.css",
+      "androidstudio.min.css",
+      "arduino-light.min.css",
+      "arta.min.css",
+      "ascetic.min.css",
+      "atom-one-dark.min.css",
+      "atom-one-dark-reasonable.min.css",
+      "atom-one-light.min.css",
+      "brown-paper.min.css",
+      "codepen-embed.min.css",
+      "color-brewer.min.css",
+      "cybertopia-cherry.min.css",
+      "cybertopia-dimmer.min.css",
+      "cybertopia-icecap.min.css",
+      "cybertopia-saturated.min.css",
+      "dark.min.css",
+      "default.min.css",
+      "devibeans.min.css",
+      "docco.min.css",
+      "far.min.css",
+      "felipec.min.css",
+      "foundation.min.css",
+      "github.min.css",
+      "github-dark.min.css",
+      "github-dark-dimmed.min.css",
+      "gml.min.css",
+      "googlecode.min.css",
+      "gradient-dark.min.css",
+      "gradient-light.min.css",
+      "grayscale.min.css",
+      "hybrid.min.css",
+      "idea.min.css",
+      "intellij-light.min.css",
+      "ir-black.min.css",
+      "isbl-editor-dark.min.css",
+      "isbl-editor-light.min.css",
+      "kimbie-dark.min.css",
+      "kimbie-light.min.css",
+      "lightfair.min.css",
+      "lioshi.min.css",
+      "magula.min.css",
+      "mono-blue.min.css",
+      "monokai.min.css",
+      "monokai-sublime.min.css",
+      "night-owl.min.css",
+      "nnfx-dark.min.css",
+      "nnfx-light.min.css",
+      "nord.min.css",
+      "obsidian.min.css",
+      "panda-syntax-dark.min.css",
+      "panda-syntax-light.min.css",
+      "paraiso-dark.min.css",
+      "paraiso-light.min.css",
+      "pojoaque.min.css",
+      "purebasic.min.css",
+      "qtcreator-dark.min.css",
+      "qtcreator-light.min.css",
+      "rainbow.min.css",
+      "rose-pine.min.css",
+      "rose-pine-dawn.min.css",
+      "rose-pine-moon.min.css",
+      "routeros.min.css",
+      "school-book.min.css",
+      "shades-of-purple.min.css",
+      "srcery.min.css",
+      "stackoverflow-dark.min.css",
+      "stackoverflow-light.min.css",
+      "sunburst.min.css",
+      "tokyo-night-dark.min.css",
+      "tokyo-night-light.min.css",
+      "tomorrow-night-blue.min.css",
+      "tomorrow-night-bright.min.css",
+      "vs.min.css",
+      "vs2015.min.css",
+      "xcode.min.css",
+      "xt256.min.css"
+    ],
+    selectedLanguage: localStorage.getItem("hljsLanguage") ?? 'javascript',
+    selectedTheme: localStorage.getItem("hljsTheme") ?? 'default.min.css',
+
+    applyHighlightSettings() {
+      // 테마 CSS 교체
+      const themeLinkId = 'hljs-theme-link';
+      let linkEl = document.getElementById(themeLinkId);
+      if (!linkEl) {
+        linkEl = document.createElement('link');
+        linkEl.id = themeLinkId;
+        linkEl.rel = 'stylesheet';
+        document.head.appendChild(linkEl);
+      }
+      linkEl.href = `https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/${this.selectedTheme}`;
+
+
+      // 언어 적용: highlight 호출 시 selectedLanguage 사용
+      // 예: hljs.highlight(line.text, { language: this.selectedLanguage }).value
+
+      // 모달 닫기
+      localStorage.setItem("hljsLanguage", this.selectedLanguage);
+      localStorage.setItem("hljsTheme", this.selectedTheme);
+      this.showHighlightModal = false;
+    },
+
+    init() {
+      this.applyHighlightSettings();
+      this.loadFilesFromStorage();
+    },
   }
-},
-
-searchQuery: '',
-searchResults: [],
-currentResult: -1,
-lastQuery: '',
-
-runSearch() {
-  if (!this.searchQuery) {
-    this.searchResults = [];
-    this.currentResult = -1;
-    this.lastQuery = '';
-  // 이전 하이라이트 제거
-  document.querySelectorAll('.highlighted').forEach(el => {
-    el.classList.remove('highlighted');
-  });
-    return;
-  }
-
-  // 검색어가 바뀌었을 때만 새로 계산
-  if (this.searchQuery !== this.lastQuery) {
-    this.searchResults = this.lines
-      .map((line, i) => line.text.includes(this.searchQuery) ? i : -1)
-      .filter(i => i >= 0);
-
-    this.currentResult = this.searchResults.length ? 0 : -1;
-    this.lastQuery = this.searchQuery;
-  }
-},
-
-searchNext() {
-  if (!this.searchResults.length) return;
-  this.currentResult = (this.currentResult + 1) % this.searchResults.length;
-  this.highlightSearch();
-},
-
-searchPrev() {
-  if (!this.searchResults.length) return;
-  this.currentResult = (this.currentResult - 1 + this.searchResults.length) % this.searchResults.length;
-  this.highlightSearch();
-},
-
-highlightSearch() {
-  // 이전 하이라이트 제거
-  document.querySelectorAll('.highlighted').forEach(el => {
-    el.classList.remove('highlighted');
-  });
-
-  if (this.currentResult === -1) return;
-
-  const index = this.searchResults[this.currentResult];
-  const elements = document.querySelectorAll('.line, .line-input');
-  const el = elements[index];
-
-  if (el) {
-    el.classList.add('highlighted');
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-},
-
-showHighlightModal: false,
-availableLanguages: hljs.listLanguages(),
-availableThemes: [
-  "1c-light.min.css",
-  "a11y-dark.min.css",
-  "a11y-light.min.css",
-  "agate.min.css",
-  "an-old-hope.min.css",
-  "androidstudio.min.css",
-  "arduino-light.min.css",
-  "arta.min.css",
-  "ascetic.min.css",
-  "atom-one-dark.min.css",
-  "atom-one-dark-reasonable.min.css",
-  "atom-one-light.min.css",
-  "brown-paper.min.css",
-  "codepen-embed.min.css",
-  "color-brewer.min.css",
-  "cybertopia-cherry.min.css",
-  "cybertopia-dimmer.min.css",
-  "cybertopia-icecap.min.css",
-  "cybertopia-saturated.min.css",
-  "dark.min.css",
-  "default.min.css",
-  "devibeans.min.css",
-  "docco.min.css",
-  "far.min.css",
-  "felipec.min.css",
-  "foundation.min.css",
-  "github.min.css",
-  "github-dark.min.css",
-  "github-dark-dimmed.min.css",
-  "gml.min.css",
-  "googlecode.min.css",
-  "gradient-dark.min.css",
-  "gradient-light.min.css",
-  "grayscale.min.css",
-  "hybrid.min.css",
-  "idea.min.css",
-  "intellij-light.min.css",
-  "ir-black.min.css",
-  "isbl-editor-dark.min.css",
-  "isbl-editor-light.min.css",
-  "kimbie-dark.min.css",
-  "kimbie-light.min.css",
-  "lightfair.min.css",
-  "lioshi.min.css",
-  "magula.min.css",
-  "mono-blue.min.css",
-  "monokai.min.css",
-  "monokai-sublime.min.css",
-  "night-owl.min.css",
-  "nnfx-dark.min.css",
-  "nnfx-light.min.css",
-  "nord.min.css",
-  "obsidian.min.css",
-  "panda-syntax-dark.min.css",
-  "panda-syntax-light.min.css",
-  "paraiso-dark.min.css",
-  "paraiso-light.min.css",
-  "pojoaque.min.css",
-  "purebasic.min.css",
-  "qtcreator-dark.min.css",
-  "qtcreator-light.min.css",
-  "rainbow.min.css",
-  "rose-pine.min.css",
-  "rose-pine-dawn.min.css",
-  "rose-pine-moon.min.css",
-  "routeros.min.css",
-  "school-book.min.css",
-  "shades-of-purple.min.css",
-  "srcery.min.css",
-  "stackoverflow-dark.min.css",
-  "stackoverflow-light.min.css",
-  "sunburst.min.css",
-  "tokyo-night-dark.min.css",
-  "tokyo-night-light.min.css",
-  "tomorrow-night-blue.min.css",
-  "tomorrow-night-bright.min.css",
-  "vs.min.css",
-  "vs2015.min.css",
-  "xcode.min.css",
-  "xt256.min.css"
-],
-selectedLanguage: localStorage.getItem("hljsLanguage") ?? 'javascript',
-selectedTheme: localStorage.getItem("hljsTheme") ?? 'default.min.css',
-
-applyHighlightSettings() {
-  // 테마 CSS 교체
-  const themeLinkId = 'hljs-theme-link';
-  let linkEl = document.getElementById(themeLinkId);
-  if (!linkEl) {
-    linkEl = document.createElement('link');
-    linkEl.id = themeLinkId;
-    linkEl.rel = 'stylesheet';
-    document.head.appendChild(linkEl);
-  }
-  linkEl.href = `https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/${this.selectedTheme}`;
-
-
-  // 언어 적용: highlight 호출 시 selectedLanguage 사용
-  // 예: hljs.highlight(line.text, { language: this.selectedLanguage }).value
-
-  // 모달 닫기
-  localStorage.setItem("hljsLanguage", this.selectedLanguage);
-  localStorage.setItem("hljsTheme", this.selectedTheme);
-  this.showHighlightModal = false;
-},
-
-init() {
-  this.applyHighlightSettings();
-    this.loadFilesFromStorage();
-console.log(this.files);
-},
-
-}))
-});
+}
 </script>
-
 </body>
+
 </html>
