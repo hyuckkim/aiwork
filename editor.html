@@ -467,11 +467,11 @@ function EditorApp() {
 
     switchFile(i) {
       // 현재 스크롤 저장
-      this.files[this.currentFileIndex].scroll = window.scrollY || window.pageYOffset;
+      this.scroll = window.scrollY || window.pageYOffset;
       this.currentFileIndex = i;
       // 새 파일 스크롤 복원
       this.$nextTick(() => {
-        window.scrollTo(0, this.files[this.currentFileIndex].scroll || 0);
+        window.scrollTo(0, this.scroll || 0);
       });
     },
     toggleSelect(i) {
