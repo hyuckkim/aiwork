@@ -419,6 +419,49 @@ function HighlightModule() {
     },
   }
 }
+function CreateCommand(command, p) {
+  switch (command) {
+    case 'delete':
+      return {
+        do: lines => {
+          lines.splice(p.start, p.end - p.start + 1);
+          p.afterDo?.();
+          return lines;
+        },
+        undo: lines => {
+          lines.splice(p.start, 0, ...materialize(p.lines));
+          p.afterDo?.();
+          return lines;
+        },
+      };
+    case 'insert':
+      return {
+        do: lines => {
+          lines.splice(p.index, 0, ...materialize(p.lines));
+          p.afterDo?.();
+          return lines;
+        },
+        undo: lines => {
+          lines.splice(p.index, p.lines.length);
+          p.afterDo?.();
+          return lines;
+        },
+      };
+    case 'replace':
+      return {
+        do: lines => {
+          lines.splice(p.start, p.end - p.start + 1, ...materialize(p.newLines));
+          p.afterDo?.();
+          return lines;
+        },
+        undo: lines => {
+          lines.splice(p.start, p.newLines.length, ...materialize(p.lines));
+          p.afterDo?.();
+          return lines;
+        },
+      };
+  }
+}
 function EditorApp() {
   return {
     ...SearchModule(),
@@ -513,25 +556,21 @@ function EditorApp() {
     deleteSelection() {
       if (!this.selection) return;
       const { start, end } = this.selection;
-      const oldSnap = snapshotLines(this.lines.slice(start, end + 1));
+      const lines = snapshotLines(this.lines.slice(start, end + 1));
 
-      const cmd = {
-        do: () => {
-          this.lines.splice(start, end - start + 1);
-          this.selection = null;
-        },
-        undo: () => {
-          this.lines.splice(start, 0, ...materialize(oldSnap));
-        }
-      };
-
+      const cmd = CreateCommand('delete', {
+        start, end, lines
+      })
       this.execute(cmd);
     },
 
     execute(cmd) {
-      cmd.do();
+      const l = cmd.do(this.lines);
+      if (l) this.lines = l;
       this.undoStack.push(cmd);
       this.redoStack = [];
+
+      this.selection = null;
       this.saveFilesToStorage();
     },
 
@@ -551,21 +590,14 @@ function EditorApp() {
     manualCut() {
       if (!this.selection) return;
       const { start, end } = this.selection;
-      const oldSnap = snapshotLines(this.lines.slice(start, end + 1));
+      const lines = snapshotLines(this.lines.slice(start, end + 1));
 
-      const cmd = {
-        do: () => {
-          this.lines.splice(start, end - start + 1);
-          this.selection = null;
-        },
-        undo: () => {
-          this.lines.splice(start, 0, ...materialize(oldSnap));
-        },
-        manual: () => this.writeClipboard(oldSnap.map(l => l.text).join('\n'), true)
-      };
+      const cmd = CreateCommand('delete', {
+        start, end, lines
+      })
 
       this.execute(cmd);
-      cmd.manual();
+      this.writeClipboard(lines.map(l => l.text).join('\n'), true);
     },
 
     async paste() {
@@ -573,20 +605,14 @@ function EditorApp() {
         const text = await navigator.clipboard.readText();
         if (!text) return;
 
-        const toInsertSnap = snapshotLines(
+        const lines = snapshotLines(
           text.split('\n').map(t => ({ id: this.genId(), text: t }))
         );
-        const index = this.selection ? this.selection.end : this.lines.length - 1;
+        const index = this.selection ? this.selection.end + 1 : this.lines.length;
 
-        const cmd = {
-          do: () => {
-            this.lines.splice(index + 1, 0, ...materialize(toInsertSnap));
-            this.selection = null;
-          },
-          undo: () => {
-            this.lines.splice(index + 1, toInsertSnap.length);
-          }
-        };
+        const cmd = CreateCommand('insert', {
+          index, lines
+        });
 
         this.execute(cmd);
       } catch (e) {
@@ -602,20 +628,14 @@ function EditorApp() {
         const text = await navigator.clipboard.readText();
         if (!text) return;
 
-        const newSnap = snapshotLines(
+        const newLines = snapshotLines(
           text.split('\n').map(t => ({ id: this.genId(), text: t }))
         );
-        const oldSnap = snapshotLines(this.lines.slice(start, end + 1));
+        const lines = snapshotLines(this.lines.slice(start, end + 1));
 
-        const cmd = {
-          do: () => {
-            this.lines.splice(start, end - start + 1, ...materialize(newSnap));
-            this.selection = null;
-          },
-          undo: () => {
-            this.lines.splice(start, newSnap.length, ...materialize(oldSnap));
-          }
-        };
+        const cmd = CreateCommand('replace', {
+          start, end, lines, newLines
+        })
 
         this.execute(cmd);
       } catch (e) {
@@ -638,9 +658,12 @@ function EditorApp() {
         { id: this.genId(), text: after }
       ]);
 
-      const cmd = {
-        do: () => {
-          this.lines.splice(i, 1, ...materialize(newSnap));
+      const cmd = CreateCommand('replace', {
+        start: i,
+        end: i, // 한 줄만 교체하므로 start와 end가 같음
+        lines: oldSnap, // 기존 줄 (undo용)
+        newLines: newSnap, // 새 줄 (do용)
+        afterDo: () => {
           this.$nextTick(() => {
             const inputs = document.querySelectorAll('input.line-input');
             const nextInput = inputs[i + 1];
@@ -650,14 +673,13 @@ function EditorApp() {
             }
           });
         },
-        undo: () => {
-          this.lines.splice(i, 2, ...materialize(oldSnap));
+        afterUndo: () => {
           this.$nextTick(() => {
             const inputs = document.querySelectorAll('input.line-input');
             if (inputs[i]) inputs[i].focus();
           });
         }
-      };
+      });
 
       this.execute(cmd);
     },
@@ -676,20 +698,23 @@ function EditorApp() {
         { id: this.genId(), text: prevSnap[0].text + currSnap[0].text }
       ]);
 
-      const cmd = {
-        do: () => {
-          this.lines.splice(i - 1, 2, ...materialize(mergedSnap));
+      const cmd = CreateCommand('replace', {
+        start: i - 1,
+        end: i, // 두 줄 병합이므로 start부터 end까지 교체
+        lines: [...prevSnap, ...currSnap], // undo용 원래 줄들
+        newLines: mergedSnap, // 병합된 줄 (do용)
+        afterDo: () => {
           this.$nextTick(() => {
             const inputs = document.querySelectorAll('input.line-input');
             const newInput = inputs[i - 1];
             if (newInput) {
+              const pos = prevSnap[0].text.length;
               newInput.focus();
-              newInput.setSelectionRange(prevSnap[0].text.length, prevSnap[0].text.length);
+              newInput.setSelectionRange(pos, pos);
             }
           });
         },
-        undo: () => {
-          this.lines.splice(i - 1, 1, ...materialize(prevSnap), ...materialize(currSnap));
+        afterUndo: () => {
           this.$nextTick(() => {
             const inputs = document.querySelectorAll('input.line-input');
             const currInput = inputs[i];
@@ -697,9 +722,9 @@ function EditorApp() {
               currInput.focus();
               currInput.setSelectionRange(0, 0);
             }
-          }, 0);
+          });
         }
-      };
+      });
 
       this.execute(cmd);
     },
@@ -708,17 +733,12 @@ function EditorApp() {
       const newText = this.lines[i].text;
       if (oldText === newText) return;
 
-      const oldSnap = { id: this.lines[i].id, text: oldText };
-      const newSnap = { id: this.lines[i].id, text: newText };
+      const lines = [{ id: this.lines[i].id, text: oldText }];
+      const newLines = [{ id: this.lines[i].id, text: newText }];
 
-      const cmd = {
-        do: () => {
-          this.lines.splice(i, 1, { id: newSnap.id, text: newSnap.text });
-        },
-        undo: () => {
-          this.lines.splice(i, 1, { id: oldSnap.id, text: oldSnap.text });
-        }
-      };
+      const cmd = CreateCommand('replace', {
+        start: i, end: i, lines, newLines
+      });
 
       this.execute(cmd);
     },
@@ -726,21 +746,27 @@ function EditorApp() {
     undo() {
       if (this.undoStack.length === 0) return;
       const cmd = this.undoStack.pop();
-      cmd.undo?.();
+      const l = cmd.undo?.(this.lines);
+      if (l) this.lines = l;
       this.redoStack.push(cmd);
+
+      this.selection = null;
       this.saveFilesToStorage();
     },
 
     redo() {
       if (this.redoStack.length === 0) return;
       const cmd = this.redoStack.pop();
-      cmd.do?.();
+      const l = cmd.do?.(this.lines);
+      if (l) this.lines = l;
       this.undoStack.push(cmd);
+
+      this.selection = null;
       this.saveFilesToStorage();
     },
     saveFilesToStorage() {
       localStorage.setItem("editorFiles", JSON.stringify(this.files
-        .map(v => v.lines.map( 
+        .map(v => v.lines.length === 0 ? [''] : v.lines.map( 
           f => f.text
         ))
       ));
