@@ -208,9 +208,18 @@ input.line-input {
     <template x-if="mode==='text'">
       <div class="hljs">
         <template x-for="(line,i) in lines" :key="line.id">
-          <input class="line-input" type="text" x-model="lines[i].text" @focus="lines[i]._oldText = lines[i].text"
-            @blur="recordEdit(i)" @keyup.enter.prevent="insertLine(i, $event)"
-            @keyup.backspace="mergeWithPrev(i,$event)" enterkeyhint="enter" />
+<input
+  class="line-input"
+  type="text"
+  x-model="lines[i].text"
+  @focus="lines[i]._oldText = lines[i].text"
+  @blur="recordEdit(i)"
+  @keyup.enter.prevent="insertLine(i, $event)"
+  @keyup.backspace="mergeWithPrev(i,$event)"
+  @keydown.arrow-right="handleArrowRight(i, $event)"
+  @keydown.arrow-left="handleArrowLeft(i, $event)"
+  enterkeyhint="enter"
+/>
 
         </template>
       </div>
@@ -492,6 +501,42 @@ function EditorApp() {
       })
       this.execute(cmd);
     },
+handleArrowRight(i, event) {
+  const input = event.target;
+  const cursorPos = input.selectionStart;
+  const textLength = input.value.length;
+
+  if (cursorPos === textLength && i < this.lines.length - 1) {
+    event.preventDefault();
+    this.$nextTick(() => {
+      const inputs = document.querySelectorAll('input.line-input');
+      const nextInput = inputs[i + 1];
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.setSelectionRange(0, 0);
+      }
+    });
+  }
+},
+
+handleArrowLeft(i, event) {
+  const input = event.target;
+  const cursorPos = input.selectionStart;
+
+  if (cursorPos === 0 && i > 0) {
+    event.preventDefault();
+    this.$nextTick(() => {
+      const inputs = document.querySelectorAll('input.line-input');
+      const prevInput = inputs[i - 1];
+      if (prevInput) {
+        const prevLength = prevInput.value.length;
+        prevInput.focus();
+        prevInput.setSelectionRange(prevLength, prevLength);
+      }
+    });
+  }
+},
+
 
     execute(cmd) {
       const l = cmd.do(this.lines);
