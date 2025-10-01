@@ -418,9 +418,15 @@ function EditorApp() {
     get lines() {
       return this.files[this.currentFileIndex].lines;
     },
-    set lines(newLines) {
-      this.files[this.currentFileIndex].lines = newLines;
-    },
+set lines(newLines) {
+  if (!Array.isArray(newLines) || newLines.length === 0) {
+    this.files[this.currentFileIndex].lines = [
+      { id: this.genId(), text: "" }
+    ];
+  } else {
+    this.files[this.currentFileIndex].lines = newLines;
+  }
+},
     get undoStack() {
       return this.files[this.currentFileIndex].undoStack;
     },
